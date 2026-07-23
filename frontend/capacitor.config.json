@@ -1,0 +1,11 @@
+{
+  "appId": "com.tradeforge.app",
+  "appName": "TradeForge",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0a0a0f"
+  }
+}

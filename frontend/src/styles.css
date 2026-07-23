@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { font-family: 'Inter', system-ui, sans-serif; }
+.num { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+.card {
+  @apply bg-surface border border-border rounded-xl p-4;
+}
+.btn {
+  @apply px-4 py-2 rounded-lg bg-primary hover:opacity-90 transition text-white font-medium;
+}
+.btn-ghost {
+  @apply px-4 py-2 rounded-lg border border-border hover:bg-surface transition text-text-primary;
+}
+.input {
+  @apply bg-surface border border-border rounded-lg px-3 py-2 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary;
+}

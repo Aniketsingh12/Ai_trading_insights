@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+.parcel-cache/
+
+# Env
+.env
+.env.local
+.env.*.local
+.env.production
+*.local
+
+# Capacitor / native build outputs & signing keys
+*.keystore
+*.jks
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/release/
+frontend/ios/App/build/
+frontend/ios/App/Pods/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Build / artifacts
+*.pdf
+/backend/reports/
+/backend/cache/
+
+# OS
+Thumbs.db

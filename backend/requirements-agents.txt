@@ -1,0 +1,6 @@
+# Phase 2 — CrewAI multi-agent layer + MCP SDK.
+# Heavy (pulls langchain et al). Install only when building the agent pipeline:
+#   pip install -r requirements-agents.txt
+-r requirements.txt
+crewai==0.80.0
+mcp==1.0.0
