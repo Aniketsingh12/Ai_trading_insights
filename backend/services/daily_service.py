@@ -27,20 +27,29 @@ market commentary, NOT financial advice."""
 
 
 async def _movers(extra_tickers: list[str]) -> dict[str, Any]:
+    # Every fan-out here uses return_exceptions so a single bad/rate-limited symbol
+    # degrades one row instead of 500-ing the whole report.
     glob, india = await asyncio.gather(
         market_data_mcp.get_indices("global"),
         market_data_mcp.get_indices("india"),
+        return_exceptions=True,
     )
+    glob = glob if isinstance(glob, list) else []
+    india = india if isinstance(india, list) else []
     universe = list(glob) + list(india)
 
     # enrich with caller-supplied tickers (e.g. watchlist), de-duplicated
     seen = {x["ticker"] for x in universe}
     extra = [t.upper() for t in extra_tickers if t and t.upper() not in seen]
     if extra:
-        extra_q = await asyncio.gather(*(market_data_mcp.get_quote(t) for t in extra))
+        extra_q = await asyncio.gather(
+            *(market_data_mcp.get_quote(t) for t in extra), return_exceptions=True
+        )
         for q in extra_q:
+            if not isinstance(q, dict):
+                continue
             q.setdefault("label", q.get("ticker"))
-        universe += list(extra_q)
+            universe.append(q)
 
     with_move = [x for x in universe if x.get("change_pct") is not None]
     with_move.sort(key=lambda x: x["change_pct"], reverse=True)

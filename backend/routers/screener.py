@@ -1,9 +1,12 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from services import daily_service, screener_service
+from utils.guard import rate_limit, require_key
 
-router = APIRouter(tags=["screener"])
+# These routes fan out to many data calls and spend LLM tokens, so they carry the
+# optional access-key + rate-limit guards (both no-ops unless configured).
+router = APIRouter(tags=["screener"], dependencies=[Depends(require_key), Depends(rate_limit)])
 
 
 class RankRequest(BaseModel):
@@ -23,9 +26,13 @@ async def top(region: str = "global", limit: int = 10):
 
 
 @router.get("/screener/score/{ticker}")
-async def score(ticker: str):
-    """Scored breakdown + risk/reward metrics for a single ticker."""
-    return await screener_service.analyze_one(ticker)
+async def score(ticker: str, explain: bool = False):
+    """Scored breakdown + risk/reward metrics for a single ticker.
+
+    `explain=true` adds an LLM-written reason — opt-in so simply opening a page
+    doesn't silently spend tokens.
+    """
+    return await screener_service.analyze_one(ticker, explain=explain)
 
 
 class DailyRequest(BaseModel):

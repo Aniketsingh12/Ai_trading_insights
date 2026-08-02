@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter
 
 from mcp_servers import market_data_mcp
@@ -16,9 +18,17 @@ def _user_id() -> str:
 @router.get("")
 async def list_watchlist():
     tickers = sorted(_watchlists.get(_user_id(), set()))
-    quotes = []
-    for t in tickers:
-        quotes.append(await market_data_mcp.get_quote(t))
+    if not tickers:
+        return {"tickers": [], "quotes": []}
+    # Fetch concurrently (was a sequential await loop) and let one bad symbol
+    # degrade to a priceless row instead of failing the whole list.
+    results = await asyncio.gather(
+        *(market_data_mcp.get_quote(t) for t in tickers), return_exceptions=True
+    )
+    quotes = [
+        q if isinstance(q, dict) else {"ticker": t, "price": None}
+        for q, t in zip(results, tickers)
+    ]
     return {"tickers": tickers, "quotes": quotes}
 
 

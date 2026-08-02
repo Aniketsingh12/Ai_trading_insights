@@ -123,6 +123,27 @@ INDEX_BASKETS: dict[str, list[dict[str, str]]] = {
 # Default stock universes the Top Picks screener scans to surface a top-N.
 # These ARE individual companies (a screener needs a universe) — large, liquid,
 # sector-diversified names. Users can still rank their own tickers or watchlist.
+# Display names for the built-in universe. Kept static on purpose: fetching names
+# from yfinance means a heavy `Ticker.info` call per symbol, which is exactly what
+# triggers rate limiting when the screener scans a whole universe.
+TICKER_NAMES: dict[str, str] = {
+    "AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "NVIDIA", "GOOGL": "Alphabet",
+    "AMZN": "Amazon", "META": "Meta Platforms", "TSLA": "Tesla",
+    "JPM": "JPMorgan Chase", "V": "Visa", "WMT": "Walmart", "XOM": "Exxon Mobil",
+    "JNJ": "Johnson & Johnson", "AVGO": "Broadcom", "NFLX": "Netflix",
+    "RELIANCE.NS": "Reliance Industries", "TCS.NS": "Tata Consultancy Services",
+    "HDFCBANK.NS": "HDFC Bank", "INFY.NS": "Infosys", "ICICIBANK.NS": "ICICI Bank",
+    "BHARTIARTL.NS": "Bharti Airtel", "SBIN.NS": "State Bank of India",
+    "LT.NS": "Larsen & Toubro", "ITC.NS": "ITC", "HINDUNILVR.NS": "Hindustan Unilever",
+    "AXISBANK.NS": "Axis Bank", "MARUTI.NS": "Maruti Suzuki",
+}
+
+
+def display_name(ticker: str) -> str:
+    """Human-readable name when known, else the ticker itself."""
+    return TICKER_NAMES.get(ticker.upper(), ticker.upper())
+
+
 SCREENER_UNIVERSE: dict[str, list[str]] = {
     "global": [
         "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA",

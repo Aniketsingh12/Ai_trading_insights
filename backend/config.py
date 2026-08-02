@@ -11,6 +11,10 @@ class Settings(BaseSettings):
 
     env: str = "development"
     log_level: str = "INFO"
+
+    # Public-deployment guards (both disabled by default — see utils/guard.py).
+    api_access_key: str = ""      # if set, callers must send X-API-Key
+    rate_limit_per_min: int = 0   # if > 0, per-IP cap on expensive endpoints
     # Web dev + Capacitor app origins (Android: https://localhost, iOS: capacitor://localhost).
     cors_origins: str = "http://localhost:5173,https://localhost,capacitor://localhost,http://localhost"
 
@@ -51,7 +55,7 @@ class Settings(BaseSettings):
 
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
-    reddit_user_agent: str = "tradeforge/0.1"
+    reddit_user_agent: str = "marketmind/0.1"
 
     supabase_url: str = ""
     supabase_key: str = ""

@@ -1,15 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Newspaper, RefreshCw } from 'lucide-react';
+import { Newspaper, RefreshCw, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../lib/api';
+import AiText from '../components/AiText';
 
 function MoverPill({ m }) {
   const up = (m.change_pct ?? 0) >= 0;
   return (
     <Link
       to={`/analyze/${m.ticker}`}
-      className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-bg/40 hover:bg-border/40 transition"
+      className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg panel hover:border-primary/40 transition"
     >
       <span className="text-sm truncate">{m.label || m.ticker}</span>
       <span className={`num text-sm shrink-0 ${up ? 'text-bull' : 'text-bear'}`}>
@@ -45,7 +46,7 @@ function IndexStrip({ title, items }) {
         {items?.map((i) => {
           const up = (i.change_pct ?? 0) >= 0;
           return (
-            <div key={i.ticker} className="bg-bg/40 rounded-lg px-3 py-2">
+            <div key={i.ticker} className="panel px-3 py-2">
               <div className="text-xs text-text-secondary truncate">{i.label}</div>
               <div className="num text-sm">{i.price != null ? i.price.toLocaleString() : '—'}</div>
               <div className={`num text-xs ${up ? 'text-bull' : 'text-bear'}`}>
@@ -73,7 +74,7 @@ export default function DailyReport() {
   const generated = r?.generated_at ? new Date(r.generated_at).toLocaleString() : null;
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5 animate-rise">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -98,9 +99,11 @@ export default function DailyReport() {
       {r && (
         <>
           {/* AI briefing */}
-          <div className="card">
-            <div className="font-semibold mb-2 flex items-center gap-2">AI Market Briefing</div>
-            <pre className="whitespace-pre-wrap text-sm text-text-primary leading-relaxed">{r.briefing}</pre>
+          <div className="card bg-primary/5 border-primary/30">
+            <div className="font-semibold mb-2.5 flex items-center gap-2">
+              <Sparkles size={16} className="text-primary" /> AI Market Briefing
+            </div>
+            <AiText text={r.briefing} />
           </div>
 
           {/* Indices */}
@@ -112,12 +115,16 @@ export default function DailyReport() {
           {/* Movers */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="card space-y-2">
-              <div className="font-semibold text-bull">Top Gainers</div>
+              <div className="font-semibold text-bull flex items-center gap-2">
+                <TrendingUp size={16} /> Top Gainers
+              </div>
               {r.gainers?.length ? r.gainers.map((m) => <MoverPill key={m.ticker} m={m} />)
                 : <div className="text-text-secondary text-sm">No data</div>}
             </div>
             <div className="card space-y-2">
-              <div className="font-semibold text-bear">Top Losers</div>
+              <div className="font-semibold text-bear flex items-center gap-2">
+                <TrendingDown size={16} /> Top Losers
+              </div>
               {r.losers?.length ? r.losers.map((m) => <MoverPill key={m.ticker} m={m} />)
                 : <div className="text-text-secondary text-sm">No data</div>}
             </div>

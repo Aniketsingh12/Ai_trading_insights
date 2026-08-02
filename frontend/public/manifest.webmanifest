@@ -1,13 +1,13 @@
 {
-  "name": "TradeForge — AI Trading Analyst",
-  "short_name": "TradeForge",
+  "name": "MarketMind — AI Trading Analyst",
+  "short_name": "MarketMind",
   "description": "AI-powered trading analysis: scores, risk/reward, deep research, daily market reports.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#07070c",
+  "theme_color": "#07070c",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },

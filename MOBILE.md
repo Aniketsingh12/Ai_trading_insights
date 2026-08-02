@@ -1,4 +1,4 @@
-# TradeForge — Mobile (PWA + Android APK)
+# MarketMind — Mobile (PWA + Android APK)
 
 **One codebase → web, installable PWA, and a native Android APK.** The React app in
 `frontend/` is already responsive (bottom tab bar on phones) and Capacitor-ready.
@@ -32,10 +32,10 @@ The APK is not served by a web server, so it can't use the `/api` dev proxy. It 
 your **deployed backend's absolute URL**. Before building the APK:
 
 1. Deploy the backend (Render / Hugging Face Space / Railway) → e.g.
-   `https://tradeforge-api.onrender.com`
+   `https://marketmind-api.onrender.com`
 2. Create `frontend/.env.production`:
    ```
-   VITE_API_URL=https://tradeforge-api.onrender.com
+   VITE_API_URL=https://marketmind-api.onrender.com
    ```
 3. On the backend, make sure `CORS_ORIGINS` includes the app origins (already the default):
    ```
@@ -76,8 +76,8 @@ Then rebuild the APK in Android Studio. **No duplicate code — same `src/` driv
 
 ## App identity
 Edit `frontend/capacitor.config.json` to change:
-- `appId` — reverse-domain id (currently `com.tradeforge.app`); must be unique on the Play Store
-- `appName` — display name under the icon (currently `TradeForge`)
+- `appId` — reverse-domain id (currently `com.marketmind.app`); must be unique on the Play Store
+- `appName` — display name under the icon (currently `MarketMind`)
 
 App icons live in `frontend/public/icons/` (reused from the PWA). To customize the native
 launcher icon specifically, use Android Studio's Image Asset Studio after `cap add android`.

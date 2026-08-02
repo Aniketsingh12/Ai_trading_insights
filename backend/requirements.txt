@@ -1,13 +1,20 @@
+# Production runtime dependencies.
+# Dev/test extras (pytest) live in requirements-dev.txt so deploys stay lean.
+
+# --- web framework ---
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 pydantic==2.9.2
 pydantic-settings==2.6.0
 python-dotenv==1.0.1
+
+# --- HTTP / LLM providers ---
+# Groq, Gemini and Ollama are all called over plain HTTP via httpx (see utils/llm.py),
+# so only the Anthropic SDK is needed as an actual package.
 httpx==0.27.2
 anthropic==0.39.0
-ollama==0.3.3
-celery==5.4.0
-redis==5.1.1
+
+# --- market data ---
 yfinance==1.4.1
 # curl_cffi lets yfinance impersonate a browser — avoids Yahoo's 429 rate-limiting.
 curl_cffi==0.15.0
@@ -16,11 +23,7 @@ numpy==2.1.3
 # Indicators (RSI/MACD/SMA) are computed in pure pandas — no TA library required.
 # Optional native TA-Lib (faster, more indicators): see https://github.com/cgohlke/talib-build
 # ta-lib==0.4.32
-supabase==2.9.1
-praw==7.8.1
-reportlab==4.2.5
-python-multipart==0.0.12
-websockets==13.1
-loguru==0.7.2
-pytest==8.3.3
-pytest-asyncio==0.24.0
+
+# --- optional infra (both degrade gracefully if absent/unreachable) ---
+redis==5.1.1        # utils/cache.py falls back to an in-memory dict
+supabase==2.9.1     # db/supabase_client.py — optional persistence layer

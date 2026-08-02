@@ -9,13 +9,22 @@ see backend/tasks/README.md. The crew itself is unchanged either way.)
 from __future__ import annotations
 
 import uuid
+from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Any
 
 from agents.crew import AGENT_NAMES, run_deep_research
 
-# job_id -> job dict
-_JOBS: dict[str, dict[str, Any]] = {}
+# job_id -> job dict. Bounded: each finished job holds the full report plus every
+# agent's raw data (candles, news, ratios), so an unbounded dict would slowly eat
+# the container's memory. Oldest entries are evicted first.
+_JOBS: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+_MAX_JOBS = 50
+
+
+def _evict_old_jobs() -> None:
+    while len(_JOBS) > _MAX_JOBS:
+        _JOBS.popitem(last=False)  # drop oldest
 
 
 def _new_job(ticker: str) -> dict[str, Any]:
@@ -35,6 +44,7 @@ def _new_job(ticker: str) -> dict[str, Any]:
 def create_job(ticker: str) -> dict[str, Any]:
     job = _new_job(ticker)
     _JOBS[job["id"]] = job
+    _evict_old_jobs()
     return job
 
 

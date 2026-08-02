@@ -1,9 +1,15 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from services import research_service
 from services.analysis_service import quick_analysis
+from utils.guard import rate_limit, require_key
 
-router = APIRouter(prefix="/analyze", tags=["analyze"])
+# LLM-backed routes — guarded (no-ops unless API_ACCESS_KEY / RATE_LIMIT_PER_MIN set).
+router = APIRouter(
+    prefix="/analyze",
+    tags=["analyze"],
+    dependencies=[Depends(require_key), Depends(rate_limit)],
+)
 
 
 @router.get("/quick/{ticker}")

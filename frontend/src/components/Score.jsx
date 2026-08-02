@@ -88,7 +88,7 @@ export function RiskReward({ metrics, sym = '' }) {
 function Cell({ label, value, sub, tone, term }) {
   const toneCls = tone === 'bull' ? 'text-bull' : tone === 'bear' ? 'text-bear' : 'text-text-primary';
   return (
-    <div className="bg-bg/40 rounded-lg py-2">
+    <div className="panel py-2">
       <div className="text-xs text-text-secondary flex items-center justify-center gap-1">
         {label} {term && <InfoTip term={term} />}
       </div>

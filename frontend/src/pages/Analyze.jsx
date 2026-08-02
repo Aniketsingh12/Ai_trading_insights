@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { ScoreBadge, Breakdown, RiskReward } from '../components/Score';
 import InfoTip from '../components/InfoTip';
+import AiText from '../components/AiText';
+import TickerSearch from '../components/TickerSearch';
 import { useBeginner } from '../lib/beginner.jsx';
 
 function SentimentBadge({ analysis }) {
@@ -50,88 +52,17 @@ function AgentProgress({ agents }) {
   );
 }
 
-const TYPE_LABEL = {
-  EQUITY: 'Stock', ETF: 'ETF', INDEX: 'Index',
-  FUTURE: 'Future', CRYPTOCURRENCY: 'Crypto', MUTUALFUND: 'Fund',
-};
-
-function TickerSearch({ value, onChange, onSelect }) {
-  const [suggestions, setSuggestions] = useState([]);
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  // Debounced search — fires 300 ms after typing stops
-  useEffect(() => {
-    const q = value.trim();
-    if (q.length < 2) { setSuggestions([]); setOpen(false); return; }
-    const timer = setTimeout(async () => {
-      try {
-        const res = await api.search(q);
-        setSuggestions(res);
-        setOpen(res.length > 0);
-      } catch { setSuggestions([]); }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [value]);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e) => { if (!containerRef.current?.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  return (
-    <div className="relative flex-1 max-w-md" ref={containerRef}>
-      <input
-        className="input w-full"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
-        placeholder="Search — Apple, Reliance, Bitcoin, or type a ticker…"
-        autoComplete="off"
-        spellCheck="false"
-      />
-      {open && suggestions.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-xl z-50 overflow-hidden">
-          {suggestions.map((s) => (
-            <li key={s.ticker}>
-              <button
-                type="button"
-                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-border text-left transition"
-                onMouseDown={(e) => {
-                  e.preventDefault(); // keep focus
-                  onSelect(s.ticker.toUpperCase());
-                  setOpen(false);
-                  setSuggestions([]);
-                }}
-              >
-                <span className="num font-semibold text-text-primary text-sm w-28 shrink-0 truncate">
-                  {s.ticker}
-                </span>
-                <span className="text-text-secondary text-sm truncate flex-1">{s.name}</span>
-                <span className="text-xs text-text-secondary shrink-0">{s.exchange}</span>
-                {s.type && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-secondary shrink-0">
-                    {TYPE_LABEL[s.type] || s.type}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function Chart({ data }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!ref.current || !data?.length) return;
     const chart = createChart(ref.current, {
-      layout: { background: { color: '#12121a' }, textColor: '#94a3b8' },
-      grid: { vertLines: { color: '#1e1e2e' }, horzLines: { color: '#1e1e2e' } },
+      // Transparent so the frosted card and aurora show through the chart.
+      layout: { background: { color: 'transparent' }, textColor: '#94a3b8' },
+      grid: { vertLines: { color: 'rgba(35,35,56,.6)' }, horzLines: { color: 'rgba(35,35,56,.6)' } },
+      rightPriceScale: { borderColor: 'rgba(35,35,56,.9)' },
+      timeScale: { borderColor: 'rgba(35,35,56,.9)' },
+      crosshair: { vertLine: { color: '#6366f1' }, horzLine: { color: '#6366f1' } },
       width: ref.current.clientWidth,
       height: 360,
     });
@@ -172,11 +103,23 @@ export default function Analyze() {
     enabled: !!ticker,
     refetchInterval: 30_000,
   });
+  // Score + trade math are free (pure math) — always load them.
   const { data: scored, isLoading: scoreLoading } = useQuery({
     queryKey: ['score', ticker],
-    queryFn: () => api.scoreTicker(ticker),
+    queryFn: () => api.scoreTicker(ticker, false),
     enabled: !!ticker,
+    staleTime: 5 * 60_000,
   });
+  // The AI reason costs a token call, so it's opt-in per ticker.
+  const [explainFor, setExplainFor] = useState(null);
+  const { data: explained, isFetching: explaining } = useQuery({
+    queryKey: ['score-explain', ticker],
+    queryFn: () => api.scoreTicker(ticker, true),
+    enabled: explainFor === ticker,
+    staleTime: 30 * 60_000,
+    retry: 1,
+  });
+  const reason = explained?.reason;
 
   // Poll the deep-research job while it's running.
   const { data: report } = useQuery({
@@ -229,20 +172,16 @@ export default function Analyze() {
   const sym = quote?.currency_symbol ?? '$';
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <form onSubmit={submit} className="flex gap-2">
-        <TickerSearch
-          value={input}
-          onChange={setInput}
-          onSelect={handleSelect}
-        />
+    <div className="p-4 sm:p-6 space-y-4 animate-rise">
+      <form onSubmit={submit} className="flex gap-2 max-w-2xl">
+        <TickerSearch className="flex-1" value={input} onChange={setInput} onSelect={handleSelect} />
         <button className="btn" type="submit">Load</button>
       </form>
 
       <div className="flex items-baseline gap-3 flex-wrap">
-        <h1 className="text-3xl font-bold">{ticker}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{ticker}</h1>
         {quote?.exchange && (
-          <span className="text-xs px-2 py-0.5 rounded bg-border text-text-secondary">
+          <span className="text-xs px-2 py-0.5 rounded-md border border-border bg-elevated/70 text-text-secondary">
             {quote.exchange} · {quote.region}
           </span>
         )}
@@ -250,7 +189,11 @@ export default function Analyze() {
           <>
             <span className="num text-2xl">{sym}{quote.price.toFixed(2)}</span>
             {quote.change != null && (
-              <span className={`num ${up ? 'text-bull' : 'text-bear'}`}>
+              <span
+                className={`num text-sm px-2 py-0.5 rounded-md ${
+                  up ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'
+                }`}
+              >
                 {up ? '+' : ''}{quote.change.toFixed(2)} ({quote.change_pct?.toFixed(2)}%)
               </span>
             )}
@@ -273,11 +216,19 @@ export default function Analyze() {
             {scoreLoading && <div className="text-text-secondary text-sm">Scoring…</div>}
             {scored?.metrics && !scored.metrics.error && (
               <>
-                {scored.reason && (
-                  <div className="bg-bg/40 rounded-lg p-3">
-                    <div className="text-xs uppercase tracking-wide text-text-secondary mb-1">AI reasoning</div>
-                    <p className="text-sm text-text-primary leading-relaxed">{scored.reason}</p>
+                {reason ? (
+                  <div className="panel p-3">
+                    <div className="text-xs uppercase tracking-wide text-text-secondary mb-1.5">AI reasoning</div>
+                    <AiText text={reason} dense />
                   </div>
+                ) : (
+                  <button
+                    className="btn-ghost w-full text-sm"
+                    disabled={explaining}
+                    onClick={() => setExplainFor(ticker)}
+                  >
+                    {explaining ? 'Thinking…' : 'Explain this score with AI'}
+                  </button>
                 )}
                 <RiskReward metrics={scored.metrics} sym={sym} />
                 {!beginner && (
@@ -311,7 +262,9 @@ export default function Analyze() {
               </div>
             )}
             {result?.analysis && (
-              <pre className="whitespace-pre-wrap text-sm text-text-primary leading-relaxed">{result.analysis}</pre>
+              <div className="border-t border-border pt-3">
+                <AiText text={result.analysis} />
+              </div>
             )}
           </div>
 
@@ -338,24 +291,37 @@ export default function Analyze() {
 
       {/* Full report */}
       {report?.status === 'done' && report?.report && (
-        <div className="card space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">Deep Research Report — {report.ticker}</h2>
-            <VerdictBadge verdict={report.verdict} />
+        <div className="space-y-4">
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-lg font-bold">Deep Research — {report.ticker}</h2>
+              <VerdictBadge verdict={report.verdict} />
+            </div>
+            <AiText text={report.report} />
+            <p className="text-xs text-text-secondary border-t border-border pt-3">
+              Generated by {report.agents?.length ?? 5} AI analysts from live market data.
+              Informational analysis, not financial advice.
+            </p>
           </div>
-          <pre className="whitespace-pre-wrap text-sm text-text-primary leading-relaxed">{report.report}</pre>
-          {!beginner && (
-            <details className="text-sm">
-              <summary className="cursor-pointer text-text-secondary">Per-agent breakdown</summary>
-              <div className="mt-3 space-y-4">
-                {report.sections?.map((s) => (
-                  <div key={s.agent}>
-                    <div className="font-semibold text-primary">{s.agent} · {s.role}</div>
-                    <pre className="whitespace-pre-wrap text-text-secondary leading-relaxed mt-1">{s.output}</pre>
-                  </div>
-                ))}
+
+          {!beginner && report.sections?.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs uppercase tracking-wide text-text-secondary px-1">
+                Individual analyst reports
               </div>
-            </details>
+              {report.sections.map((s) => (
+                <details key={s.agent} className="card card-3d p-0 overflow-hidden group">
+                  <summary className="cursor-pointer px-4 py-3 hover:bg-elevated/60 transition flex items-center gap-2">
+                    <span className="text-text-secondary group-open:rotate-90 transition-transform">›</span>
+                    <span className="font-semibold text-sm">{s.agent}</span>
+                    <span className="text-xs text-text-secondary">· {s.role}</span>
+                  </summary>
+                  <div className="px-4 pb-4 pt-1 border-t border-border">
+                    <AiText text={s.output} />
+                  </div>
+                </details>
+              ))}
+            </div>
           )}
         </div>
       )}

@@ -1,8 +1,22 @@
-# TradeForge
+# MarketMind
 
 AI-powered trading analysis platform. Multi-agent research, real-time market data, MCP-connected tool ecosystem.
 
 ## Quickstart
+
+**One command runs everything** (creates the venv, installs deps, writes `backend/.env`,
+picks free ports, starts API + web app):
+
+```powershell
+.\run.ps1
+```
+Git Bash / macOS / Linux: `./run.sh`
+
+Then open the printed URL (usually http://localhost:5173). Ctrl+C stops both.
+Market data works with no API keys; AI features need one free key — see *LLM Backends*.
+
+<details>
+<summary>Manual setup (if you prefer running the two halves yourself)</summary>
 
 ### Prereqs
 - Python 3.11+
@@ -20,9 +34,8 @@ copy ..\.env.example .env   # creates backend\.env — then fill in keys
 uvicorn main:app --reload --port 8000
 ```
 
-`requirements.txt` covers the Phase 1 data + quick-analysis layer. The heavier
-CrewAI multi-agent stack (Phase 2) lives in `requirements-agents.txt` — install it
-only when you start building agents: `pip install -r requirements-agents.txt`.
+`requirements.txt` is the lean production set. For running the test suite locally,
+install `requirements-dev.txt` instead (adds pytest).
 
 Technical indicators (RSI/MACD/SMA) are computed in pure pandas, so no native
 TA library is required to run.
@@ -36,9 +49,11 @@ npm run dev
 
 Frontend on http://localhost:5173, backend on http://localhost:8000.
 
+</details>
+
 ## LLM Backends
 
-TradeForge supports four LLM providers, switchable via `LLM_PROVIDER` env var:
+MarketMind supports four LLM providers, switchable via `LLM_PROVIDER` env var:
 
 - `gemini` — **Google Gemini, free** via AI Studio. Just set `GEMINI_API_KEY`
   (base URL + models are preset). Great free hosted option.
@@ -60,10 +75,10 @@ ollama pull qwen2.5:7b
 Then set `LLM_PROVIDER=ollama`. For a **free hosted** setup (e.g. deployment), get a Groq
 key at console.groq.com and set `LLM_PROVIDER=openai_compat`.
 
-3-tier model mapping (anthropic / ollama / groq):
-- `quick`  → Haiku / `llama3.1:8b` / `llama-3.1-8b-instant` (single-asset summaries)
-- `agent`  → Sonnet / `qwen2.5:7b` / `llama-3.3-70b-versatile` (the 4 analyst agents)
-- `report` → Opus / `qwen2.5:7b` / `llama-3.3-70b-versatile` (final synthesis)
+3-tier model mapping (anthropic / ollama / groq / gemini):
+- `quick`  → Haiku / `llama3.1:8b` / `llama-3.1-8b-instant` / `gemini-2.0-flash` (single-asset summaries)
+- `agent`  → Sonnet / `qwen2.5:7b` / `llama-3.3-70b-versatile` / `gemini-2.0-flash` (the 4 analyst agents)
+- `report` → Opus / `qwen2.5:7b` / `llama-3.3-70b-versatile` / `gemini-2.5-flash` (final synthesis)
 
 See `backend/utils/llm.py` for the abstraction layer.
 
@@ -136,6 +151,8 @@ web-series content so you only see market news.
 ## Markets — Global + India
 
 Enter any symbol on the **Analyze** page; the **Dashboard** has a Global / India toggle.
+Both toggle baskets are market-level only (indices/ETFs/FX/commodities) — no company
+tickers pinned to the dashboard, enforced by a test in `backend/tests/test_markets.py`.
 
 | Market | Ticker format | Example |
 |--------|---------------|---------|
@@ -143,23 +160,66 @@ Enter any symbol on the **Analyze** page; the **Dashboard** has a Global / India
 | India NSE | `.NS` suffix | `RELIANCE.NS`, `TCS.NS`, `INFY.NS` |
 | India BSE | `.BO` suffix | `TCS.BO` |
 | Crypto | `-USD` | `BTC-USD` |
-| UK / AU / others | `.L` / `.AX` / … | `VOD.L`, `BHP.AX` |
+| UK / Germany / Japan / Hong Kong / AU / others | `.L` / `.DE` / `.T` / `.HK` / `.AX` / … | `VOD.L`, `BHP.AX` |
 
 Indian quotes show ₹ and the NSE/BSE badge; news search auto-strips the suffix.
-Indian indices on the Dashboard: Nifty 50 (`^NSEI`), Sensex (`^BSESN`), Bank Nifty,
-Nifty IT, USD/INR. Exchange/currency logic: `backend/utils/markets.py`.
+
+- **Global dashboard basket**: S&P 500, NASDAQ 100, Dow Jones, FTSE 100, DAX, Nikkei 225,
+  Hang Seng, VIX, Bitcoin, Gold
+- **India dashboard basket**: Nifty 50 (`^NSEI`), Sensex (`^BSESN`), Bank Nifty, Nifty IT,
+  India VIX, USD/INR
+
+Exchange/currency/region logic lives in `backend/utils/markets.py`.
+
+## Mobile
+
+The frontend is one responsive codebase for web, installable PWA, and Android APK:
+
+- **Phone browser**: sidebar becomes a top bar + bottom tab nav automatically (<768px)
+- **PWA**: "Add to Home Screen" installs it full-screen with an icon (manifest + service
+  worker already wired up, `frontend/public/`)
+- **Android APK**: Capacitor wraps the same `dist/` build — no separate mobile codebase.
+  See **[MOBILE.md](MOBILE.md)** for the exact build steps (`npx cap add android`, …)
+
+## Production hardening
+
+Two guards exist for a public deployment, both **off by default** so local dev has zero
+friction (`backend/utils/guard.py`):
+
+```
+RATE_LIMIT_PER_MIN=20     # per-IP cap on the LLM/screener routes
+API_ACCESS_KEY=<random>   # requires header  X-API-Key: <value>  if set
+```
+
+Every external data/LLM call is wrapped so one failing ticker or rate-limited request
+degrades gracefully (a null tile, a fallback reason) instead of 500-ing the whole page —
+see `backend/tests/test_regressions.py` for the covered failure modes. In-memory stores
+(watchlist, portfolio, deep-research jobs) are capped and reset on restart; a Postgres
+schema is ready in `backend/db/schemas.sql` if you want persistence instead.
 
 ## Structure
 
 ```
-tradeforge/
-├── backend/         # FastAPI + 5-agent crew + MCP servers
-│   ├── agents/      # Phase 2 deep-research agents (built)
-│   ├── mcp_servers/ # market / news / fundamentals / social / options / portfolio
-│   ├── services/    # analysis + research-job orchestration
-│   └── utils/       # llm.py (Ollama+Claude), markets.py, cache.py
-├── frontend/        # React + Vite + Tailwind
-├── .env.example
+marketmind/
+├── backend/
+│   ├── agents/        # Phase 2 deep-research crew (5 agents, no CrewAI runtime dep)
+│   ├── mcp_servers/    # market data / news / fundamentals / social / options / portfolio
+│   ├── routers/        # FastAPI endpoints (analyze, market, screener, watchlist, portfolio)
+│   ├── services/       # research jobs, quick analysis, screener ranking, daily report
+│   ├── utils/          # llm.py (4 providers), markets.py, scoring.py, cache.py, guard.py
+│   ├── db/             # Postgres schema + Supabase client (optional persistence)
+│   ├── tests/          # pytest — scoring, markets, news filter, regressions
+│   └── .env.example
+├── frontend/
+│   ├── src/pages/       # Dashboard, Analyze, TopPicks, DailyReport, Watchlist, Portfolio
+│   ├── src/components/  # Score.jsx (badge/breakdown/risk-reward), InfoTip.jsx
+│   ├── src/lib/         # api.js, beginner.jsx (mode toggle), glossary.js
+│   ├── public/          # PWA manifest, service worker, icons
+│   └── capacitor.config.json
+├── run.ps1 / run.sh    # single-command launcher (setup + start both, picks free ports)
+├── render.yaml         # backend deploy blueprint (Render)
+├── DEPLOY.md           # web deploy guide (Render + Vercel, free)
+├── MOBILE.md           # PWA + Android APK guide
 └── README.md
 ```
 

@@ -1,11 +1,11 @@
 """RiskAgent — risk analyst. Tools: market-data-mcp (volatility), fundamentals-mcp, options-flow-mcp."""
 from __future__ import annotations
 
-import statistics
 from typing import Any
 
 from agents.base import Agent
 from mcp_servers import fundamentals_mcp, market_data_mcp, options_flow_mcp
+from utils import scoring
 
 SYSTEM = """You are a risk analyst. Identify threats and catalysts for this asset. Cover:
 1. Upcoming catalysts: earnings, product launches, regulatory decisions (if indicated by data)
@@ -26,7 +26,7 @@ class RiskAgent(Agent):
 
     async def gather(self, ticker: str) -> dict[str, Any]:
         candles = await market_data_mcp.get_ohlcv(ticker, "1d", 90)
-        vol = self._realized_volatility(candles)
+        vol = scoring.realized_volatility([c["close"] for c in candles if c.get("close")])
         ratios = await fundamentals_mcp.get_ratios(ticker)
         put_call = await options_flow_mcp.get_put_call_ratio(ticker)
         beta = ratios.get("beta") if isinstance(ratios, dict) else None
@@ -37,18 +37,3 @@ class RiskAgent(Agent):
             "valuation_context": ratios,
         }
 
-    @staticmethod
-    def _realized_volatility(candles: list[dict[str, Any]]) -> float | None:
-        closes = [c["close"] for c in candles if c.get("close")]
-        if len(closes) < 21:
-            return None
-        rets = [
-            (closes[i] - closes[i - 1]) / closes[i - 1]
-            for i in range(1, len(closes))
-            if closes[i - 1]
-        ]
-        window = rets[-30:]
-        if len(window) < 2:
-            return None
-        daily_std = statistics.pstdev(window)
-        return round(daily_std * (252 ** 0.5) * 100, 2)  # annualized %

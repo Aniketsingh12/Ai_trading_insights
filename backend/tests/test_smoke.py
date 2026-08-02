@@ -9,7 +9,7 @@ client = TestClient(app)
 def test_root():
     r = client.get("/")
     assert r.status_code == 200
-    assert r.json()["name"] == "TradeForge"
+    assert r.json()["name"] == "MarketMind"
 
 
 def test_health():

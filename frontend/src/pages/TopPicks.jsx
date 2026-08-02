@@ -6,15 +6,16 @@ import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { ScoreBadge, Breakdown, RiskReward } from '../components/Score';
 import { useBeginner } from '../lib/beginner.jsx';
+import AiText from '../components/AiText';
 
 function PickRow({ p, beginner, rank }) {
   const [open, setOpen] = useState(false);
   const up = (p.change_pct ?? 0) >= 0;
   const sym = p.currency_symbol ?? '';
   return (
-    <div className="card p-0 overflow-hidden">
+    <div className="card card-3d p-0 overflow-hidden">
       <button
-        className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 hover:bg-border/30 text-left transition"
+        className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 hover:bg-elevated/60 text-left transition"
         onClick={() => setOpen((o) => !o)}
       >
         {rank != null && (
@@ -31,7 +32,9 @@ function PickRow({ p, beginner, rank }) {
               {p.change_pct != null ? `${up ? '+' : ''}${p.change_pct.toFixed(2)}%` : '—'}
             </span>
           </div>
-          <div className="text-xs text-text-secondary hidden sm:block">{p.exchange}</div>
+          <div className="text-xs text-text-secondary hidden sm:block truncate">
+            {p.name && p.name !== p.ticker ? p.name : p.exchange}
+          </div>
         </div>
         {/* desktop-only columns */}
         <div className="hidden sm:block num text-sm w-24 shrink-0">{sym}{p.price?.toLocaleString()}</div>
@@ -48,11 +51,11 @@ function PickRow({ p, beginner, rank }) {
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-border space-y-4">
           {p.reason && (
-            <div className="bg-bg/40 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-text-secondary mb-1">
+            <div className="panel p-3">
+              <div className="text-xs uppercase tracking-wide text-text-secondary mb-1.5">
                 AI reasoning — why it ranks here
               </div>
-              <p className="text-sm text-text-primary leading-relaxed">{p.reason}</p>
+              <AiText text={p.reason} dense />
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-5">
@@ -95,9 +98,14 @@ export default function TopPicks() {
   const { data: watch } = useQuery({ queryKey: ['watchlist'], queryFn: api.watchlist });
 
   // Auto-scan the built-in universe for the selected region → top 10.
+  // Each run scans a whole universe (many data calls + an LLM call), so keep
+  // results fresh for a while instead of refetching on every visit.
   const topQ = useQuery({
     queryKey: ['toppicks', region],
     queryFn: () => api.topPicks(region, 10),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    retry: 1,
   });
 
   const rankM = useMutation({
@@ -132,7 +140,7 @@ export default function TopPicks() {
   const summary = data?.summary || '';
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5 animate-rise">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -144,13 +152,13 @@ export default function TopPicks() {
               : 'Your custom ranking. Switch a region below to return to the auto Top 10.'}
           </p>
         </div>
-        <div className="flex gap-1 bg-surface border border-border rounded-lg p-1">
+        <div className="flex gap-1 bg-elevated/60 border border-border rounded-lg p-1">
           {REGIONS.map((r) => (
             <button
               key={r.id}
               onClick={() => pickRegion(r.id)}
               className={`px-3 py-1.5 rounded-md text-sm transition ${
-                showTop && region === r.id ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
+                showTop && region === r.id ? 'bg-primary text-white shadow-glow' : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               {r.label}
@@ -184,8 +192,10 @@ export default function TopPicks() {
 
       {summary && !loading && (
         <div className="card bg-primary/5 border-primary/30">
-          <div className="text-xs uppercase tracking-wide text-primary mb-1">AI ranking summary</div>
-          <p className="text-sm text-text-primary leading-relaxed">{summary}</p>
+          <div className="text-xs uppercase tracking-wide text-primary mb-1.5 flex items-center gap-1.5">
+            <Sparkles size={13} /> AI ranking summary
+          </div>
+          <AiText text={summary} dense />
         </div>
       )}
 

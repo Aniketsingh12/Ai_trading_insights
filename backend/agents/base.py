@@ -1,8 +1,8 @@
 """
-Base agent for TradeForge deep research.
+Base agent for MarketMind deep research.
 
 Design note — why not CrewAI's autonomous tool-calling:
-TradeForge must run on BOTH the Claude API and local OSS models (Ollama). Small
+MarketMind must run on BOTH the Claude API and local OSS models (Ollama). Small
 OSS models (llama3.1:8b, qwen2.5:7b) have weak/inconsistent function-calling, which
 makes CrewAI-style autonomous tool selection unreliable. So instead each agent:
   1. gather()  — deterministically pulls the data it needs from the MCP servers

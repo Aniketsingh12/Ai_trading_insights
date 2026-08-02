@@ -3,18 +3,89 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
-body { font-family: 'Inter', system-ui, sans-serif; }
-.num { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: theme('colors.bg');
+  /* Static depth wash behind the animated aurora layer. */
+  background-image:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
+    radial-gradient(50rem 35rem at 5% 105%, rgba(34, 211, 238, 0.07), transparent 60%);
+  background-attachment: fixed;
+}
+.num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
+/* ---------- depth surfaces ---------- */
+/*
+ * Cards are frosted glass sitting above the aurora: a translucent fill, a hairline
+ * top highlight (the `sheen` gradient) so the top edge catches light, and a
+ * two-layer shadow for contact + ambient occlusion.
+ */
 .card {
-  @apply bg-surface border border-border rounded-xl p-4;
+  @apply relative rounded-xl p-4 border border-border shadow-depth;
+  background-color: rgb(16 16 25 / 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
+.card::before {
+  content: '';
+  @apply absolute inset-0 rounded-xl pointer-events-none bg-sheen;
+}
+.card > * { position: relative; }
+
+/* Interactive cards lift and tilt very slightly toward the viewer on hover. */
+.card-3d {
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease, border-color .25s ease;
+  transform-origin: center bottom;
+}
+@media (hover: hover) {
+  .card-3d:hover {
+    transform: translateY(-3px) perspective(900px) rotateX(2.5deg);
+    @apply shadow-lift border-primary/40;
+  }
+}
+
+/* Panel nested inside a card — sits "deeper", so it's darker and inset. */
+.panel {
+  @apply rounded-lg border border-border/70 shadow-inset;
+  background-color: rgb(7 7 12 / 0.55);
+}
+
+/* ---------- controls ---------- */
 .btn {
-  @apply px-4 py-2 rounded-lg bg-primary hover:opacity-90 transition text-white font-medium;
+  @apply relative px-4 py-2 rounded-lg font-medium text-white transition
+         shadow-depth active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed;
+  background-image: linear-gradient(180deg, #7275f5, #5457e8);
 }
+.btn:not(:disabled):hover { @apply shadow-glow; filter: brightness(1.08); }
+
 .btn-ghost {
-  @apply px-4 py-2 rounded-lg border border-border hover:bg-surface transition text-text-primary;
+  @apply px-4 py-2 rounded-lg border border-border bg-elevated/60 text-text-primary
+         transition hover:border-primary/50 hover:bg-elevated active:translate-y-px
+         disabled:opacity-50 disabled:cursor-not-allowed;
 }
+
 .input {
-  @apply bg-surface border border-border rounded-lg px-3 py-2 text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary;
+  @apply rounded-lg border border-border px-3 py-2 text-text-primary shadow-inset
+         placeholder:text-text-secondary focus:outline-none focus:border-primary
+         focus:ring-2 focus:ring-primary/25 transition;
+  background-color: rgb(7 7 12 / 0.6);
+}
+
+/* ---------- accents ---------- */
+.glow-bull { @apply shadow-glow-bull; }
+.glow-bear { @apply shadow-glow-bear; }
+
+/* Loading placeholder with a light sweep instead of a flat pulse. */
+.skeleton { @apply relative overflow-hidden bg-elevated/70 rounded-lg; }
+.skeleton::after {
+  content: '';
+  @apply absolute inset-0 -translate-x-full animate-shimmer;
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-3d, .btn, .btn-ghost { transition: none; }
+  .card-3d:hover { transform: none; }
+  .skeleton::after { animation: none; }
+  .aurora-layer { animation: none !important; }
 }

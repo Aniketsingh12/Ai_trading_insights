@@ -1,9 +1,9 @@
-# Render.com blueprint for the TradeForge backend.
+# Render.com blueprint for the MarketMind backend.
 # Deploy: push to GitHub → render.com → New → Blueprint → pick this repo.
 # Secrets (sync:false) are entered in the Render dashboard, never committed.
 services:
   - type: web
-    name: tradeforge-api
+    name: marketmind-api
     runtime: python
     plan: free
     rootDir: backend
@@ -31,7 +31,12 @@ services:
       - key: GEMINI_API_KEY          # only needed if LLM_PROVIDER=gemini
         sync: false
       # ── CORS: set to your deployed frontend URL(s), comma-separated ──
-      - key: CORS_ORIGINS           # e.g. https://tradeforge.vercel.app,https://localhost,capacitor://localhost
+      - key: CORS_ORIGINS           # e.g. https://marketmind.vercel.app,https://localhost,capacitor://localhost
+        sync: false
+      # ── Abuse guards: this URL is public, so cap the LLM/screener routes ──
+      - key: RATE_LIMIT_PER_MIN
+        value: "20"
+      - key: API_ACCESS_KEY         # optional; if set, callers must send X-API-Key
         sync: false
       # ── Optional data-provider keys (app works without them) ──
       - key: NEWSAPI_KEY

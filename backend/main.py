@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from routers import analyze, health, market, portfolio, screener, watchlist
 
-app = FastAPI(title="TradeForge API", version="0.1.0")
+app = FastAPI(title="MarketMind API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,8 +25,8 @@ app.include_router(portfolio.router)
 @app.get("/")
 async def root():
     return {
-        "name": "TradeForge",
-        "version": "0.1.0",
+        "name": "MarketMind",
+        "version": "0.2.0",
         "llm_provider": settings.llm_provider,
         "docs": "/docs",
     }

@@ -1,4 +1,4 @@
-# Deploying TradeForge on the Web (free)
+# Deploying MarketMind on the Web (free)
 
 Two services: **backend on Render** (FastAPI) + **frontend on Vercel** (React). LLM runs on
 **Groq** (free, hosted) since the server has no GPU for Ollama. Total cost: ₹0.
@@ -19,9 +19,9 @@ https://…vercel.app            https://…onrender.com          free API
 cd E:\tradeforge
 git init
 git add .
-git commit -m "TradeForge"
+git commit -m "MarketMind"
 # create an empty repo on github.com, then:
-git remote add origin https://github.com/<you>/tradeforge.git
+git remote add origin https://github.com/<you>/marketmind.git
 git branch -M main
 git push -u origin main
 ```
@@ -36,7 +36,7 @@ insurance since they've been used in dev.)
    - `CORS_ORIGINS` = leave as `https://localhost,capacitor://localhost,http://localhost`
      for now; you'll add the Vercel URL in step 4
    - `NEWSAPI_KEY`, `POLYGON_API_KEY`, `FMP_API_KEY` = optional (paste if you have them)
-3. Deploy → you get `https://tradeforge-api.onrender.com`.
+3. Deploy → you get `https://marketmind-api.onrender.com`.
 4. Test: open `…onrender.com/health` → should show `"provider":"openai_compat","ok":true`,
    and `…onrender.com/docs` for the API explorer.
 
@@ -47,13 +47,13 @@ insurance since they've been used in dev.)
 1. https://vercel.com → **Add New ▸ Project** → import the same repo.
 2. Set **Root Directory = `frontend`** (Vercel auto-detects Vite; `vercel.json` handles SPA routing).
 3. Add an Environment Variable:
-   - `VITE_API_URL` = `https://tradeforge-api.onrender.com` (your Render URL, no trailing slash)
-4. Deploy → you get `https://tradeforge.vercel.app`.
+   - `VITE_API_URL` = `https://marketmind-api.onrender.com` (your Render URL, no trailing slash)
+4. Deploy → you get `https://marketmind.vercel.app`.
 
 ## 4. Connect them (CORS)
 On **Render → your service → Environment**, set:
 ```
-CORS_ORIGINS=https://tradeforge.vercel.app,https://localhost,capacitor://localhost,http://localhost
+CORS_ORIGINS=https://marketmind.vercel.app,https://localhost,capacitor://localhost,http://localhost
 ```
 Save → Render redeploys. Now the frontend can call the backend.
 
@@ -76,6 +76,17 @@ Gemini has its own dedicated provider — you only set a key:
    Base URL and models (`gemini-2.0-flash` / `gemini-2.5-flash`) are preset — override
    with `GEMINI_MODEL_QUICK/AGENT/REPORT` if you like.
 3. `…onrender.com/health` should show `"provider":"gemini","ok":true`.
+
+## Protecting a public API (recommended)
+Your Render URL is public, so anyone who finds it can spend your LLM quota. Two
+optional guards (both off by default) are built in — set them in the Render dashboard:
+```
+RATE_LIMIT_PER_MIN=20     # per-IP cap on the LLM/screener routes
+API_ACCESS_KEY=<random>   # requires header  X-API-Key: <value>
+```
+`RATE_LIMIT_PER_MIN` alone is usually enough for a personal demo. If you set
+`API_ACCESS_KEY`, the browser frontend must send that header too — simplest is to
+leave it blank and rely on the rate limit unless you need real access control.
 
 ## Notes & alternatives
 - **Other OpenAI-compatible LLMs** — with `LLM_PROVIDER=openai_compat`, point

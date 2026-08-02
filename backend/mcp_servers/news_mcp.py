@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -27,18 +28,38 @@ _MARKET_FEEDS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-# Drop entertainment / OTT / movie / series content that leaks into general feeds.
-_BLOCK_TERMS = (
-    "web series", "web-series", " ott", "ott ", "box office", "trailer", "teaser",
-    "first look", "movie review", "film review", "bollywood", "hollywood", "tollywood",
-    "kollywood", "episode", "season ", "watch online", "release date", "song launch",
-    "celebrity", "actress", "web show", "what to watch", "streaming guide", "ott release",
+# Drop entertainment / OTT / movie content that leaks into general feeds.
+# Matched on WORD BOUNDARIES: plain substring matching made "earnings season" hit
+# "season" and "first look at the Budget" hit "first look".
+_BLOCK_PATTERN = re.compile(
+    r"\b("
+    r"web[- ]series|web show|box office|movie review|film review|"
+    r"bollywood|hollywood|tollywood|kollywood|"
+    r"ott|streaming guide|what to watch|watch online|song launch|"
+    r"trailer|teaser|episode|actress|full movie|first look|"
+    r"netflix series|prime video|hotstar|release date"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Market vocabulary that makes a headline financial even if a block term matched —
+# this is what keeps "earnings season", "celebrity-backed IPO" and
+# "Netflix series drives revenue" in the feed.
+_FINANCE_PATTERN = re.compile(
+    r"\b("
+    r"stocks?|shares?|markets?|nifty|sensex|earnings|revenue|ipo|profits?|"
+    r"investors?|rally|index|indices|fed|rbi|inflation|bonds?|yields?|"
+    r"rupee|dollar|crude|sebi|quarterly|q[1-4]|budget|gdp"
+    r")\b",
+    re.IGNORECASE,
 )
 
 
 def _is_entertainment(title: str) -> bool:
-    t = title.lower()
-    return any(term in t for term in _BLOCK_TERMS)
+    if not _BLOCK_PATTERN.search(title):
+        return False
+    # Business news about entertainment companies is still market news — keep it.
+    return not _FINANCE_PATTERN.search(title)
 
 
 async def _fetch_feed(url: str, source: str, client: httpx.AsyncClient) -> list[dict[str, Any]]:

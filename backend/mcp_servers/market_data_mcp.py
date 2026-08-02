@@ -151,7 +151,9 @@ async def get_ohlcv(ticker: str, interval: str = "1d", days: int = 90) -> list[d
         }
         for row in df.to_dict(orient="records")
     ]
-    await cache_set(key, candles, ttl=300)
+    # Daily candles only change once a day, so cache them long — the screener
+    # scans a whole universe and would otherwise hammer the free data provider.
+    await cache_set(key, candles, ttl=3600 if interval == "1d" else 300)
     return candles
 
 
@@ -195,8 +197,17 @@ async def get_indices(region: str = "global") -> list[dict[str, Any]]:
     from utils.markets import INDEX_BASKETS
 
     basket = INDEX_BASKETS.get(region.lower(), INDEX_BASKETS["global"])
-    results = await asyncio.gather(*(get_quote(item["ticker"]) for item in basket))
-    return [{**q, "label": item["label"]} for q, item in zip(results, basket)]
+    # return_exceptions: one flaky/rate-limited symbol must not blank the whole
+    # dashboard — degrade that tile to a null price instead.
+    results = await asyncio.gather(
+        *(get_quote(item["ticker"]) for item in basket), return_exceptions=True
+    )
+    out: list[dict[str, Any]] = []
+    for q, item in zip(results, basket):
+        if not isinstance(q, dict):
+            q = {"ticker": item["ticker"], "price": None, "error": str(q)}
+        out.append({**q, "label": item["label"]})
+    return out
 
 
 async def get_52week(ticker: str) -> dict[str, Any]:

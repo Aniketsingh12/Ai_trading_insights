@@ -19,6 +19,7 @@ from typing import Any
 from mcp_servers import market_data_mcp, news_mcp, social_sentiment_mcp
 from utils import scoring
 from utils.llm import llm
+from utils.markets import display_name
 
 _REASON_SYSTEM = """You are an equity analyst explaining a quantitative signal score.
 Be specific, cite the factor points and risk/reward you are given, separate strength
@@ -79,7 +80,7 @@ async def _compute(ticker: str) -> dict[str, Any]:
 
     return {
         "ticker": ticker,
-        "name": quote.get("name") or ticker,
+        "name": quote.get("name") or display_name(ticker),
         "price": price,
         "currency_symbol": quote.get("currency_symbol", ""),
         "exchange": quote.get("exchange"),
@@ -172,6 +173,7 @@ async def _rank_reasons(picks: list[dict]) -> tuple[dict[str, str], str]:
 
     reasons: dict[str, str] = {}
     summary = ""
+    by_ticker = {p["ticker"]: p for p in picks}
     for line in text.splitlines():
         if "::" not in line:
             continue
@@ -180,9 +182,12 @@ async def _rank_reasons(picks: list[dict]) -> tuple[dict[str, str], str]:
         if key.startswith("OVERALL"):
             summary = val
             continue
-        for p in picks:
-            if p["ticker"] in key and p["ticker"] not in reasons:
-                reasons[p["ticker"]] = val
+        # Match on whole tokens, never substrings: "V" (Visa) must not absorb the
+        # line for "NVDA"/"AVGO". Strip list markers like "#1" or "1." first.
+        tokens = {t.strip("#.,:*()[]") for t in key.split()}
+        for tok in tokens:
+            if tok in by_ticker and tok not in reasons:
+                reasons[tok] = val
                 break
     for p in picks:  # fill any the LLM skipped
         reasons.setdefault(p["ticker"], _fallback_reason(p))
