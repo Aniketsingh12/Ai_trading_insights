@@ -12,11 +12,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': {
-        target: backend,
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ''),
-      },
+      // No path rewrite: the backend serves everything under /api, so dev hits
+      // exactly the same URLs as the deployed single-service build.
+      '/api': { target: backend, changeOrigin: true },
     },
   },
 });

@@ -14,10 +14,12 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.9"
       # ── LLM (hosted, no GPU needed) ──
-      # Default: Groq (openai_compat). For Google Gemini instead, set
-      #   LLM_PROVIDER=gemini  and  GEMINI_API_KEY=<key from aistudio.google.com/apikey>
+      # Default: Google Gemini — just paste a free key from aistudio.google.com/apikey.
       - key: LLM_PROVIDER
-        value: openai_compat
+        value: gemini
+      - key: GEMINI_API_KEY          # required — free key from aistudio.google.com/apikey
+        sync: false
+      # ── Alternative provider (Groq) — only used if you set LLM_PROVIDER=openai_compat ──
       - key: OPENAI_BASE_URL
         value: https://api.groq.com/openai/v1
       - key: OPENAI_API_KEY          # free key from console.groq.com
@@ -28,11 +30,9 @@ services:
         value: llama-3.3-70b-versatile
       - key: OPENAI_MODEL_REPORT
         value: llama-3.3-70b-versatile
-      - key: GEMINI_API_KEY          # only needed if LLM_PROVIDER=gemini
-        sync: false
-      # ── CORS: set to your deployed frontend URL(s), comma-separated ──
-      - key: CORS_ORIGINS           # e.g. https://marketmind.vercel.app,https://localhost,capacitor://localhost
-        sync: false
+      # ── CORS: baseline covers local/Capacitor use; APPEND your Vercel URL after step 4 ──
+      - key: CORS_ORIGINS
+        value: https://localhost,capacitor://localhost,http://localhost
       # ── Abuse guards: this URL is public, so cap the LLM/screener routes ──
       - key: RATE_LIMIT_PER_MIN
         value: "20"

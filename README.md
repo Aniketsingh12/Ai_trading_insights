@@ -84,13 +84,15 @@ See `backend/utils/llm.py` for the abstraction layer.
 
 ## Deploy
 
-Deploy free on the web (Render + Vercel + Groq) — see **[DEPLOY.md](DEPLOY.md)**.
+Deploy as **one service on Railway** (Docker builds the React app and FastAPI serves it,
+so there's a single URL and no CORS setup) — see **[DEPLOY.md](DEPLOY.md)**. A split
+Render + Vercel setup is documented there too.
 Android APK / PWA — see **[MOBILE.md](MOBILE.md)**. Both use the same codebase.
 
 ## Deep Research (Phase 2 — 5 agents)
 
-`POST /analyze/deep/{ticker}` runs a 5-agent pipeline and returns a `report_id`;
-poll `GET /analyze/report/{report_id}` for live agent progress + the final report
+`POST /api/analyze/deep/{ticker}` runs a 5-agent pipeline and returns a `report_id`;
+poll `GET /api/analyze/report/{report_id}` for live agent progress + the final report
 with a verdict (STRONG BUY … STRONG SELL). Works on both Ollama and Claude.
 
 ```
@@ -120,11 +122,11 @@ configured. The **Trade Math** (entry / target / stop / upside% / downside% / R:
 expected monthly move) comes from support-resistance levels and realized volatility —
 scenarios, not promises (informational, not advice).
 
-- `GET  /screener/top?region=global|india&limit=10` — **Top Picks**: auto-scan a built-in
+- `GET  /api/screener/top?region=global|india&limit=10` — **Top Picks**: auto-scan a built-in
   large-cap universe and return the top-N with AI reasons
-- `GET  /screener/score/{ticker}` — scored breakdown + trade math + reason for one symbol
-- `POST /screener/rank` `{tickers:[...]}` — rank your own list / watchlist
-- `POST /daily/report` `{tickers:[...]}` — **Daily Report**: indices, movers, region news + briefing
+- `GET  /api/screener/score/{ticker}` — scored breakdown + trade math + reason for one symbol
+- `POST /api/screener/rank` `{tickers:[...]}` — rank your own list / watchlist
+- `POST /api/daily/report` `{tickers:[...]}` — **Daily Report**: indices, movers, region news + briefing
 
 UI: **Top Picks** page auto-loads the top 10 for a Global/India toggle (or rank your own
 tickers/watchlist), each row expandable for the math + AI reason; **Daily Report** page
@@ -144,7 +146,7 @@ web-series content so you only see market news.
 
 ## Search by company name
 
-`GET /market/search?q=Apple` resolves company names to tickers via Yahoo Finance
+`GET /api/market/search?q=Apple` resolves company names to tickers via Yahoo Finance
 (no key). The Analyze page input is an autocomplete — type "Reliance" → pick
 `RELIANCE.NS`, type "Bitcoin" → `BTC-USD`.
 
@@ -217,8 +219,9 @@ marketmind/
 │   ├── public/          # PWA manifest, service worker, icons
 │   └── capacitor.config.json
 ├── run.ps1 / run.sh    # single-command launcher (setup + start both, picks free ports)
-├── render.yaml         # backend deploy blueprint (Render)
-├── DEPLOY.md           # web deploy guide (Render + Vercel, free)
+├── render.yaml         # optional: split-deploy blueprint (Render)
+├── Dockerfile          # single-service image (React build + FastAPI)
+├── DEPLOY.md           # deploy guide (Railway single-service; Render+Vercel alt)
 ├── MOBILE.md           # PWA + Android APK guide
 └── README.md
 ```

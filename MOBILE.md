@@ -32,10 +32,10 @@ The APK is not served by a web server, so it can't use the `/api` dev proxy. It 
 your **deployed backend's absolute URL**. Before building the APK:
 
 1. Deploy the backend (Render / Hugging Face Space / Railway) → e.g.
-   `https://marketmind-api.onrender.com`
+   `https://<your-app>.up.railway.app`
 2. Create `frontend/.env.production`:
    ```
-   VITE_API_URL=https://marketmind-api.onrender.com
+   VITE_API_URL=https://<your-app>.up.railway.app/api
    ```
 3. On the backend, make sure `CORS_ORIGINS` includes the app origins (already the default):
    ```
@@ -43,7 +43,7 @@ your **deployed backend's absolute URL**. Before building the APK:
    ```
 
 > For a quick **local** test without deploying, run the backend on your PC and set
-> `VITE_API_URL=http://<your-PC-LAN-IP>:8000` (e.g. `http://192.168.1.5:8000`) so the phone
+> `VITE_API_URL=http://<your-PC-LAN-IP>:8000/api` (e.g. `http://192.168.1.5:8000/api`) so the phone
 > on the same Wi-Fi can reach it. `http://localhost` won't work from the phone.
 
 ### Build the APK
