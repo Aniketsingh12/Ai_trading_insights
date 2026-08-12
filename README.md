@@ -53,17 +53,18 @@ Frontend on http://localhost:5173, backend on http://localhost:8000.
 
 ## LLM Backends
 
-MarketMind supports four LLM providers, switchable via `LLM_PROVIDER` env var:
+MarketMind supports five LLM providers, switchable via `LLM_PROVIDER` env var:
 
-- `gemini` — **Google Gemini, free** via AI Studio. Just set `GEMINI_API_KEY`
-  (base URL + models are preset). Great free hosted option.
-- `openai_compat` — Any OpenAI-compatible API: **Groq (free)**, OpenRouter, Together,
+- `together` — **Together AI** (default). Wide open-model catalogue with per-tier
+  model choice. Just set `TOGETHER_API_KEY`; base URL + models are preset.
+- `gemini` — **Google Gemini, free** via AI Studio. Just set `GEMINI_API_KEY`.
+- `openai_compat` — Any other OpenAI-compatible API: **Groq (free)**, OpenRouter,
   HF router. Set `OPENAI_BASE_URL` + `OPENAI_API_KEY` + `OPENAI_MODEL_*`.
 - `ollama` — Local open-source models (Llama 3, Qwen, etc.). Free, private, needs the
   models pulled locally.
-- `anthropic` — Claude API (Haiku/Sonnet/Opus). Best quality; requires `ANTHROPIC_API_KEY`.
+- `anthropic` — Claude API (Haiku/Sonnet/Opus). Requires `ANTHROPIC_API_KEY`.
 
-Both `gemini` and `openai_compat` need no GPU, so they're ideal for a deployed server.
+Every provider except `ollama` needs no GPU, so they're all fine for a deployed server.
 
 Missing keys surface as a clean per-request error — the app still boots.
 
@@ -72,13 +73,22 @@ For free local testing:
 ollama pull llama3.1:8b
 ollama pull qwen2.5:7b
 ```
-Then set `LLM_PROVIDER=ollama`. For a **free hosted** setup (e.g. deployment), get a Groq
-key at console.groq.com and set `LLM_PROVIDER=openai_compat`.
+Then set `LLM_PROVIDER=ollama`. For a hosted setup, get a key at
+[api.together.ai](https://api.together.ai) and set `LLM_PROVIDER=together` — or use
+Gemini's free tier with `LLM_PROVIDER=gemini`.
 
-3-tier model mapping (anthropic / ollama / groq / gemini):
-- `quick`  → Haiku / `llama3.1:8b` / `llama-3.1-8b-instant` / `gemini-2.0-flash` (single-asset summaries)
-- `agent`  → Sonnet / `qwen2.5:7b` / `llama-3.3-70b-versatile` / `gemini-2.0-flash` (the 4 analyst agents)
-- `report` → Opus / `qwen2.5:7b` / `llama-3.3-70b-versatile` / `gemini-2.5-flash` (final synthesis)
+**3-tier model mapping.** Cost scales with how much reasoning a call actually needs —
+cheap models carry the frequent calls, and the flagship is reserved for the single
+synthesis that decides the verdict.
+
+| Tier | Used by | Together (default) | Gemini | Anthropic | Ollama |
+|------|---------|--------------------|--------|-----------|--------|
+| `quick` | single-asset summaries, score explanations | `openai/gpt-oss-20b` | `gemini-2.0-flash` | Haiku | `llama3.1:8b` |
+| `agent` | the 4 analyst agents, Top Picks ranking | `deepseek-ai/DeepSeek-V4-Flash-0731` | `gemini-2.0-flash` | Sonnet | `qwen2.5:7b` |
+| `report` | final synthesis + verdict | `deepseek-ai/DeepSeek-V4-Pro` | `gemini-2.5-flash` | Opus | `qwen2.5:7b` |
+
+On Together that works out to roughly **$0.02 per deep-research run** (5 LLM calls).
+Override any tier with `TOGETHER_MODEL_QUICK` / `_AGENT` / `_REPORT`.
 
 See `backend/utils/llm.py` for the abstraction layer.
 

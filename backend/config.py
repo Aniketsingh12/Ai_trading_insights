@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     gemini_model_agent: str = "gemini-2.0-flash"
     gemini_model_report: str = "gemini-2.5-flash"
 
+    # Together AI — its own provider so you only set a key (api.together.ai).
+    # Tiering is deliberate: cheap models carry the frequent calls, and the
+    # flagship is reserved for the one synthesis call that decides the verdict.
+    together_base_url: str = "https://api.together.ai/v1"
+    together_api_key: str = ""
+    together_model_quick: str = "openai/gpt-oss-20b"                       # $0.05/$0.20
+    together_model_agent: str = "deepseek-ai/DeepSeek-V4-Flash-0731"       # $0.14/$0.28
+    together_model_report: str = "deepseek-ai/DeepSeek-V4-Pro"             # $1.74/$3.48
+
     polygon_api_key: str = ""
     fmp_api_key: str = ""
     newsapi_key: str = ""

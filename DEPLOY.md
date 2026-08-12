@@ -8,14 +8,15 @@ configuration at all because they're the same origin.
 https://marketmind.up.railway.app
   ├─ /            → React app (served by FastAPI from backend/static)
   └─ /api/*       → FastAPI endpoints
-                        └─ calls → Gemini (free LLM)
+                        └─ calls → Together AI (LLM)
 ```
 
 ---
 
 ## 0. Prerequisites
 - A **GitHub** account with this project pushed to it
-- A free **Gemini** API key → https://aistudio.google.com/apikey → *Create API key*
+- A **Together AI** API key → https://api.together.ai → *API Keys*
+  *(or a free Gemini key from https://aistudio.google.com/apikey — see "Switching the LLM")*
 
 ## 1. Push to GitHub
 ```powershell
@@ -41,11 +42,13 @@ git ls-files | grep -i env
 3. Open the service → **Variables** tab → add:
    | Variable | Value |
    |---|---|
-   | `LLM_PROVIDER` | `gemini` |
-   | `GEMINI_API_KEY` | *your key from Step 0* |
+   | `LLM_PROVIDER` | `together` |
+   | `TOGETHER_API_KEY` | *your key from Step 0* |
    | `RATE_LIMIT_PER_MIN` | `20` |
    
-   Optional, only if you have them: `NEWSAPI_KEY`, `POLYGON_API_KEY`, `FMP_API_KEY`.
+   The three `TOGETHER_MODEL_*` vars are optional — sensible defaults are baked in
+   (see the tier table in the README). Optional data keys, only if you have them:
+   `NEWSAPI_KEY`, `POLYGON_API_KEY`, `FMP_API_KEY`.
    **`CORS_ORIGINS` is not needed** — same-origin deployment.
 4. **Settings ▸ Networking ▸ Generate Domain** to get a public URL.
 5. First build takes ~3–5 min (installs npm + pip). Later pushes are faster and deploy
@@ -55,7 +58,7 @@ git ls-files | grep -i env
 | URL | Expect |
 |---|---|
 | `https://<your-app>.up.railway.app/` | The MarketMind dashboard |
-| `…/api/health` | `{"status":"ok","llm":{"provider":"gemini","ok":true}}` |
+| `…/api/health` | `{"status":"ok","llm":{"provider":"together","ok":true,…}}` |
 | `…/docs` | Swagger API explorer |
 
 Then click through: Analyze a ticker → Top Picks → Daily Report → add a Portfolio position
@@ -69,7 +72,9 @@ Then click through: Analyze a ticker → Top Picks → Daily Report → add a Po
 ## Switching the LLM
 Everything is one env var. In Railway → Variables:
 
-**Groq** (also free, faster):
+**Gemini** (free tier): `LLM_PROVIDER=gemini` + `GEMINI_API_KEY=<key from aistudio.google.com/apikey>`
+
+**Groq** (free, fast):
 ```
 LLM_PROVIDER=openai_compat
 OPENAI_API_KEY=<key from console.groq.com>
@@ -80,7 +85,11 @@ OPENAI_MODEL_REPORT=llama-3.3-70b-versatile
 ```
 **Anthropic** (paid, best quality): `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY=...`
 
-Check `…/api/health` after any change — it reports the active provider.
+To change just one Together tier — e.g. a cheaper final synthesis — override
+`TOGETHER_MODEL_REPORT` without touching the provider.
+
+Check `…/api/health` after any change — it reports the active provider and, for
+Together, the exact model resolved for each tier.
 
 ## Protecting a public API
 The URL is public, so anyone who finds it can spend your LLM quota.

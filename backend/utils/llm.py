@@ -1,6 +1,15 @@
 """
-LLM abstraction supporting both Claude API and local Ollama (OSS) models.
-Switch via LLM_PROVIDER env var.
+LLM abstraction over several providers, switched with the LLM_PROVIDER env var:
+
+  together       — Together AI (api.together.ai), paid, wide open-model catalogue
+  gemini         — Google Gemini, free tier via AI Studio
+  openai_compat  — any OpenAI-compatible endpoint (Groq, OpenRouter, HF router…)
+  anthropic      — Claude API
+  ollama         — local open models, no key needed
+
+Everything except anthropic/ollama speaks the same POST /chat/completions shape,
+so those share `_chat_completion`. Each provider maps three tiers — quick, agent,
+report — so cost can scale with how much reasoning a call actually needs.
 """
 from __future__ import annotations
 
@@ -50,6 +59,12 @@ class LLMClient:
                 "agent": settings.gemini_model_agent,
                 "report": settings.gemini_model_report,
             }[tier]
+        if self.provider == "together":
+            return {
+                "quick": settings.together_model_quick,
+                "agent": settings.together_model_agent,
+                "report": settings.together_model_report,
+            }[tier]
         return {
             "quick": settings.ollama_model_quick,
             "agent": settings.ollama_model_agent,
@@ -72,6 +87,8 @@ class LLMClient:
             return await self._openai_complete(prompt, system, model, max_tokens, temperature)
         if self.provider == "gemini":
             return await self._gemini_complete(prompt, system, model, max_tokens, temperature)
+        if self.provider == "together":
+            return await self._together_complete(prompt, system, model, max_tokens, temperature)
         if self.provider == "ollama":
             return await self._ollama_complete(prompt, system, model, max_tokens, temperature)
         raise ValueError(f"Unknown LLM provider: {self.provider}")
@@ -113,7 +130,24 @@ class LLMClient:
             r = await client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             data = r.json()
-        return data["choices"][0]["message"]["content"].strip()
+
+        # Parse defensively: some OpenAI-compatible providers return 200 with an
+        # error body, and reasoning-style models can send content=null while the
+        # text sits in `reasoning_content`. Blindly indexing then .strip()-ing
+        # would raise KeyError/AttributeError instead of a usable message.
+        choices = data.get("choices") or []
+        if not choices:
+            err = data.get("error") or data
+            raise RuntimeError(f"LLM returned no choices: {str(err)[:300]}")
+        message = choices[0].get("message") or {}
+        content = message.get("content") or message.get("reasoning_content") or ""
+        content = content.strip()
+        if not content:
+            raise RuntimeError(
+                f"LLM returned an empty completion (model={model}, "
+                f"finish_reason={choices[0].get('finish_reason')})"
+            )
+        return content
 
     async def _openai_complete(self, prompt, system, model, max_tokens, temperature) -> str:
         """Groq (free) / OpenRouter / Together / HF router."""
@@ -131,6 +165,15 @@ class LLMClient:
             base_url=settings.gemini_base_url,
             api_key=settings.gemini_api_key,
             key_hint="GEMINI_API_KEY (free key from aistudio.google.com/apikey)",
+        )
+
+    async def _together_complete(self, prompt, system, model, max_tokens, temperature) -> str:
+        """Together AI via its OpenAI-compatible endpoint (api.together.ai)."""
+        return await self._chat_completion(
+            prompt, system, model, max_tokens, temperature,
+            base_url=settings.together_base_url,
+            api_key=settings.together_api_key,
+            key_hint="TOGETHER_API_KEY (key from api.together.ai)",
         )
 
     async def _ollama_complete(
@@ -169,6 +212,17 @@ class LLMClient:
                 "provider": "gemini",
                 "ok": bool(settings.gemini_api_key),
                 "model": settings.gemini_model_quick,
+            }
+        if self.provider == "together":
+            return {
+                "provider": "together",
+                "ok": bool(settings.together_api_key),
+                "base_url": settings.together_base_url,
+                "models": {
+                    "quick": settings.together_model_quick,
+                    "agent": settings.together_model_agent,
+                    "report": settings.together_model_report,
+                },
             }
         return {"provider": "anthropic", "ok": bool(settings.anthropic_api_key)}
 
