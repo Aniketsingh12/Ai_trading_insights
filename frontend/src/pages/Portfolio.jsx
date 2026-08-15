@@ -1,50 +1,66 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Trash2, Briefcase, TrendingUp, TrendingDown } from 'lucide-react';
+import { Trash2, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import PageHeader from '../components/PageHeader';
 
 const fmt = (n, d = 2) =>
   n == null ? '—' : n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 
-function Signed({ value, pct, sym = '' }) {
-  if (value == null) return <span className="text-text-secondary">—</span>;
+function Signed({ value, pct, sym = '', className = '' }) {
+  if (value == null) return <span className="text-text-tertiary">—</span>;
   const up = value >= 0;
   return (
-    <span className={`num ${up ? 'text-bull' : 'text-bear'}`}>
+    <span className={`num ${up ? 'text-bull' : 'text-bear'} ${className}`}>
       {up ? '+' : '−'}{sym}{fmt(Math.abs(value))}
-      {pct != null && <span className="opacity-75"> ({up ? '+' : ''}{pct.toFixed(2)}%)</span>}
+      {pct != null && <span className="opacity-65"> ({up ? '+' : '−'}{Math.abs(pct).toFixed(2)}%)</span>}
     </span>
   );
 }
 
-/** One summary card per currency — mixing INR and USD into one total would be wrong. */
+/**
+ * One card per currency. Rupees and dollars are never added together — there's
+ * no FX layer here, so a combined total would be a number that means nothing.
+ */
 function TotalCard({ t }) {
   const up = (t.pnl ?? 0) >= 0;
   return (
-    <div className={`card card-3d ${t.pnl == null ? '' : up ? 'glow-bull' : 'glow-bear'}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wide text-text-secondary">
-          {t.currency} · {t.positions} position{t.positions === 1 ? '' : 's'}
-        </span>
-        {t.pnl != null && (up ? <TrendingUp size={15} className="text-bull" /> : <TrendingDown size={15} className="text-bear" />)}
+    <div className="card">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="eyebrow">{t.currency}</span>
+        <span className="eyebrow">{t.positions} position{t.positions === 1 ? '' : 's'}</span>
       </div>
-      <div className="num text-2xl mt-1.5">
+
+      <div className="num mt-3 text-3xl font-semibold tracking-tight">
         {t.currency_symbol}{fmt(t.market_value)}
       </div>
-      <div className="text-sm mt-0.5">
-        <Signed value={t.pnl} pct={t.pnl_pct} sym={t.currency_symbol} />
-        {t.pnl == null && (
-          <span className="text-text-secondary text-xs">
-            Total hidden — {t.positions - t.priced_positions} position(s) had no live price
+
+      <div className="mt-1.5 text-sm">
+        {t.pnl != null ? (
+          <Signed value={t.pnl} pct={t.pnl_pct} sym={t.currency_symbol} className="font-medium" />
+        ) : (
+          <span className="text-xs leading-snug text-text-tertiary">
+            Total withheld — {t.positions - t.priced_positions} position(s) had no live price, so
+            this would understate the real figure.
           </span>
         )}
       </div>
-      <div className="flex justify-between text-xs text-text-secondary mt-2.5 pt-2.5 border-t border-border">
-        <span>Cost {t.currency_symbol}{fmt(t.cost_basis)}</span>
-        <span>Today <Signed value={t.day_pnl} sym={t.currency_symbol} /></span>
+
+      <div className="mt-4 flex items-baseline justify-between gap-3 border-t rule pt-3 text-xs">
+        <span className="text-text-tertiary">
+          Cost <span className="num text-text-secondary">{t.currency_symbol}{fmt(t.cost_basis)}</span>
+        </span>
+        <span className="text-text-tertiary">
+          Today <Signed value={t.day_pnl} sym={t.currency_symbol} />
+        </span>
       </div>
+
+      {/* Direction hairline, the same device the index cards use. */}
+      <span
+        className={`absolute inset-x-5 bottom-0 h-px ${t.pnl == null ? 'bg-transparent' : up ? 'bg-bull/40' : 'bg-bear/40'}`}
+      />
     </div>
   );
 }
@@ -85,108 +101,111 @@ export default function Portfolio() {
     const qty = parseFloat(form.qty);
     const avg = parseFloat(form.avg_price);
     if (!form.ticker.trim() || !(qty > 0) || !(avg > 0)) {
-      toast.error('Enter a ticker, a quantity and an average price above zero.');
+      toast.error('Enter a symbol, a quantity and an average price above zero.');
       return;
     }
     add.mutate({ ticker: form.ticker.trim().toUpperCase(), qty, avg_price: avg });
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 animate-rise">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Briefcase size={20} className="text-primary" /> Portfolio
-        </h1>
-        <p className="text-text-secondary text-sm">
-          Live market value and unrealised P&amp;L, refreshed every minute. Held in memory —
-          positions reset when the server restarts.
-        </p>
+    <div className="stagger mx-auto max-w-[1400px] space-y-7 p-5 sm:p-8">
+      <div style={{ '--i': 0 }}>
+        <PageHeader
+          eyebrow="Repriced every minute"
+          title="Portfolio"
+          lede="Live market value and unrealised profit and loss. Positions are held in memory and clear when the server restarts."
+        />
       </div>
 
       {stats?.totals?.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ '--i': 1 }}>
           {stats.totals.map((t) => <TotalCard key={t.currency} t={t} />)}
         </div>
       )}
 
-      <form onSubmit={submit} className="card grid grid-cols-2 sm:flex gap-2 sm:flex-wrap sm:items-end">
-        <div>
-          <label className="text-xs text-text-secondary block mb-1">Ticker</label>
-          <input className="input uppercase w-full sm:w-36" value={form.ticker} placeholder="AAPL"
+      <form onSubmit={submit} className="card flex flex-wrap items-end gap-3" style={{ '--i': 2 }}>
+        <div className="min-w-0 flex-1 basis-32">
+          <label htmlFor="p-ticker" className="eyebrow mb-1.5 block">Symbol</label>
+          <input id="p-ticker" className="input uppercase" value={form.ticker} placeholder="AAPL"
                  onChange={(e) => setForm({ ...form, ticker: e.target.value })} required />
         </div>
-        <div>
-          <label className="text-xs text-text-secondary block mb-1">Quantity</label>
-          <input type="number" step="any" min="0" className="input w-full sm:w-28" value={form.qty} placeholder="10"
+        <div className="min-w-0 flex-1 basis-24">
+          <label htmlFor="p-qty" className="eyebrow mb-1.5 block">Quantity</label>
+          <input id="p-qty" type="number" step="any" min="0" className="input" value={form.qty} placeholder="10"
                  onChange={(e) => setForm({ ...form, qty: e.target.value })} required />
         </div>
-        <div>
-          <label className="text-xs text-text-secondary block mb-1">Avg buy price</label>
-          <input type="number" step="any" min="0" className="input w-full sm:w-32" value={form.avg_price} placeholder="150"
+        <div className="min-w-0 flex-1 basis-28">
+          <label htmlFor="p-avg" className="eyebrow mb-1.5 block">Average buy price</label>
+          <input id="p-avg" type="number" step="any" min="0" className="input" value={form.avg_price} placeholder="150"
                  onChange={(e) => setForm({ ...form, avg_price: e.target.value })} required />
         </div>
-        <button type="submit" className="btn col-span-2 sm:col-span-1" disabled={add.isPending}>
+        <button type="submit" className="btn basis-full sm:basis-auto" disabled={add.isPending}>
           {add.isPending ? 'Adding…' : 'Add position'}
         </button>
       </form>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-14" />)}
-        </div>
-      ) : !data?.length ? (
-        <div className="card text-center py-12 space-y-2">
-          <Briefcase size={28} className="mx-auto text-text-secondary" />
-          <div className="text-text-primary font-medium">No positions yet</div>
-          <p className="text-text-secondary text-sm max-w-sm mx-auto">
-            Add a holding above to track live value and profit/loss. Works with any market —
-            try <span className="num text-text-primary">AAPL</span> or{' '}
-            <span className="num text-text-primary">RELIANCE.NS</span>.
-          </p>
-        </div>
-      ) : (
-        <div className="card p-0 overflow-x-auto">
-          <table className="w-full min-w-[620px] text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-text-secondary border-b border-border">
-                <th className="px-4 py-3">Ticker</th>
-                <th className="px-4 py-3 text-right">Qty</th>
-                <th className="px-4 py-3 text-right">Avg</th>
-                <th className="px-4 py-3 text-right">Price</th>
-                <th className="px-4 py-3 text-right">Value</th>
-                <th className="px-4 py-3 text-right">P&amp;L</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((p) => {
-                const sym = p.currency_symbol ?? '';
-                return (
-                  <tr key={p.ticker} className="border-b border-border/60 last:border-0 hover:bg-elevated/50 transition">
-                    <td className="px-4 py-3 font-semibold">
-                      <Link className="hover:text-primary transition" to={`/analyze/${p.ticker}`}>{p.ticker}</Link>
-                      {p.exchange && <div className="text-xs text-text-secondary font-normal">{p.exchange}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-right num">{fmt(p.qty, 0)}</td>
-                    <td className="px-4 py-3 text-right num text-text-secondary">{sym}{fmt(p.avg_price)}</td>
-                    <td className="px-4 py-3 text-right num">
-                      {p.priced ? `${sym}${fmt(p.price)}` : <span className="text-text-secondary text-xs">no data</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right num">{p.priced ? `${sym}${fmt(p.market_value)}` : '—'}</td>
-                    <td className="px-4 py-3 text-right"><Signed value={p.pnl} pct={p.pnl_pct} sym={sym} /></td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => remove.mutate(p.ticker)} aria-label={`Remove ${p.ticker}`}
-                              className="text-text-secondary hover:text-bear transition p-1">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div style={{ '--i': 3 }}>
+        {isLoading ? (
+          <div className="skeleton h-64" />
+        ) : !data?.length ? (
+          <div className="card px-6 py-14 text-center">
+            <Briefcase size={26} className="mx-auto text-text-tertiary" strokeWidth={1.5} />
+            <h2 className="mt-4 font-medium">No positions yet</h2>
+            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-text-secondary">
+              Add a holding above to track its value and P&amp;L live. Any market works — try{' '}
+              <span className="mono text-text-primary">AAPL</span> or{' '}
+              <span className="mono text-text-primary">RELIANCE.NS</span>.
+            </p>
+          </div>
+        ) : (
+          <div className="card overflow-x-auto p-0">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b rule text-left">
+                  <th className="eyebrow px-5 py-3 font-medium">Symbol</th>
+                  <th className="eyebrow px-5 py-3 text-right font-medium">Qty</th>
+                  <th className="eyebrow px-5 py-3 text-right font-medium">Average</th>
+                  <th className="eyebrow px-5 py-3 text-right font-medium">Price</th>
+                  <th className="eyebrow px-5 py-3 text-right font-medium">Value</th>
+                  <th className="eyebrow px-5 py-3 text-right font-medium">P&amp;L</th>
+                  <th className="w-12 px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((p) => {
+                  const sym = p.currency_symbol ?? '';
+                  return (
+                    <tr key={p.ticker} className="border-b rule transition-colors last:border-0 hover:bg-white/[.04]">
+                      <td className="px-5 py-3.5">
+                        <Link className="font-medium transition-colors hover:text-text-secondary" to={`/analyze/${p.ticker}`}>
+                          {p.ticker}
+                        </Link>
+                        {p.exchange && <div className="eyebrow mt-1">{p.exchange}</div>}
+                      </td>
+                      <td className="mono px-5 py-3.5 text-right">{fmt(p.qty, 0)}</td>
+                      <td className="mono px-5 py-3.5 text-right text-text-secondary">{sym}{fmt(p.avg_price)}</td>
+                      <td className="mono px-5 py-3.5 text-right">
+                        {p.priced ? `${sym}${fmt(p.price)}` : <span className="text-xs text-text-tertiary">no data</span>}
+                      </td>
+                      <td className="mono px-5 py-3.5 text-right">{p.priced ? `${sym}${fmt(p.market_value)}` : '—'}</td>
+                      <td className="px-5 py-3.5 text-right"><Signed value={p.pnl} pct={p.pnl_pct} sym={sym} /></td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          onClick={() => remove.mutate(p.ticker)}
+                          aria-label={`Remove ${p.ticker}`}
+                          className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

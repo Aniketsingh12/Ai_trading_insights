@@ -1,60 +1,84 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Newspaper, RefreshCw, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpRight, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import AiText from '../components/AiText';
+import PageHeader from '../components/PageHeader';
+import Delta from '../components/Delta';
 
-function MoverPill({ m }) {
-  const up = (m.change_pct ?? 0) >= 0;
+function MoverRow({ m }) {
   return (
     <Link
       to={`/analyze/${m.ticker}`}
-      className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg panel hover:border-primary/40 transition"
+      className="flex items-center justify-between gap-3 border-b rule px-4 py-2.5 transition-colors last:border-0 hover:bg-white/[.04]"
     >
-      <span className="text-sm truncate">{m.label || m.ticker}</span>
-      <span className={`num text-sm shrink-0 ${up ? 'text-bull' : 'text-bear'}`}>
-        {up ? '+' : ''}{m.change_pct?.toFixed(2)}%
-      </span>
+      <span className="truncate text-sm">{m.label || m.ticker}</span>
+      <Delta pct={m.change_pct} bare className="shrink-0 text-sm" />
     </Link>
   );
 }
 
-function NewsList({ title, items }) {
+function MoverCard({ title, items, tone }) {
   return (
-    <div className="card">
-      <div className="font-semibold mb-3">{title}</div>
-      <ul className="space-y-2.5">
+    <section className="card p-0">
+      <h2 className={`px-4 pb-3 pt-4 text-sm font-semibold ${tone}`}>{title}</h2>
+      <div className="border-t rule">
+        {items?.length
+          ? items.map((m) => <MoverRow key={m.ticker} m={m} />)
+          : <p className="px-4 py-4 text-sm text-text-tertiary">No data</p>}
+      </div>
+    </section>
+  );
+}
+
+function NewsList({ region, title, items }) {
+  return (
+    <section className="card p-0">
+      <div className="flex items-baseline justify-between gap-2 px-5 pb-3 pt-4">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <span className="eyebrow">{region}</span>
+      </div>
+      <ul className="border-t rule">
         {items?.length ? items.map((n, i) => (
-          <li key={i} className="text-sm leading-snug">
-            <a href={n.url} target="_blank" rel="noreferrer" className="text-text-primary hover:text-primary">
-              {n.title}
+          <li key={i}>
+            <a
+              href={n.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-start gap-3 border-b rule px-5 py-3.5 transition-colors last:border-0 hover:bg-white/[.04]"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm leading-snug text-text-primary">{n.title}</span>
+                {n.source && <span className="eyebrow mt-1.5 block">{n.source}</span>}
+              </span>
+              <ArrowUpRight
+                size={14}
+                className="mt-0.5 shrink-0 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100"
+              />
             </a>
-            {n.source && <span className="text-text-secondary text-xs ml-2">· {n.source}</span>}
           </li>
-        )) : <li className="text-text-secondary text-sm">No headlines available</li>}
+        )) : <li className="px-5 py-4 text-sm text-text-tertiary">No headlines available</li>}
       </ul>
-    </div>
+    </section>
   );
 }
 
 function IndexStrip({ title, items }) {
+  if (!items?.length) return null;
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-text-secondary mb-2">{title}</div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {items?.map((i) => {
-          const up = (i.change_pct ?? 0) >= 0;
-          return (
-            <div key={i.ticker} className="panel px-3 py-2">
-              <div className="text-xs text-text-secondary truncate">{i.label}</div>
-              <div className="num text-sm">{i.price != null ? i.price.toLocaleString() : '—'}</div>
-              <div className={`num text-xs ${up ? 'text-bull' : 'text-bear'}`}>
-                {i.change_pct != null ? `${up ? '+' : ''}${i.change_pct.toFixed(2)}%` : '—'}
-              </div>
+      <div className="eyebrow mb-3">{title}</div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {items.map((i) => (
+          <div key={i.ticker} className="panel px-3.5 py-3">
+            <div className="truncate text-xs text-text-secondary">{i.label}</div>
+            <div className="num mt-1 text-sm font-medium">
+              {i.price != null ? i.price.toLocaleString() : '—'}
             </div>
-          );
-        })}
+            <Delta pct={i.change_pct} bare className="mt-0.5 block text-xs" />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -71,73 +95,70 @@ export default function DailyReport() {
   }, [watch?.tickers?.length]);
 
   const r = reportM.data;
-  const generated = r?.generated_at ? new Date(r.generated_at).toLocaleString() : null;
+  const generated = r?.generated_at
+    ? new Date(r.generated_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : null;
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 animate-rise">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Newspaper size={20} className="text-primary" /> Daily Market Report
-          </h1>
-          <p className="text-text-secondary text-sm">
-            {generated ? `Generated ${generated}` : 'Today’s indices, movers, news & an AI briefing'}
-          </p>
-        </div>
-        <button
-          className="btn-ghost flex items-center gap-2"
-          onClick={() => reportM.mutate(watch?.tickers || [])}
-          disabled={reportM.isPending}
+    <div className="stagger mx-auto max-w-[1400px] space-y-7 p-5 sm:p-8">
+      <div style={{ '--i': 0 }}>
+        <PageHeader
+          eyebrow={generated ? `Filed ${generated}` : 'Compiling'}
+          title="Today’s briefing"
+          lede="Where the indices closed, what moved most, and the headlines behind it — read back to you in a paragraph."
         >
-          <RefreshCw size={15} className={reportM.isPending ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+          <button
+            className="btn-ghost"
+            onClick={() => reportM.mutate(watch?.tickers || [])}
+            disabled={reportM.isPending}
+          >
+            <RefreshCw size={14} className={reportM.isPending ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </PageHeader>
       </div>
 
-      {reportM.isPending && !r && <div className="text-text-secondary">Building today’s report…</div>}
+      {reportM.isPending && !r && (
+        <div className="space-y-4" style={{ '--i': 1 }}>
+          <p className="flex items-center gap-2 text-sm text-text-secondary">
+            <Loader2 size={14} className="animate-spin" /> Pulling indices, movers and feeds…
+          </p>
+          <div className="skeleton h-52" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="skeleton h-64" /><div className="skeleton h-64" />
+          </div>
+        </div>
+      )}
 
       {r && (
         <>
-          {/* AI briefing */}
-          <div className="card bg-primary/5 border-primary/30">
-            <div className="font-semibold mb-2.5 flex items-center gap-2">
-              <Sparkles size={16} className="text-primary" /> AI Market Briefing
+          {/* The briefing is an editorial — given the measure and the type to read like one. */}
+          <article className="card px-6 py-7 sm:px-8" style={{ '--i': 1 }}>
+            <div className="eyebrow mb-4 flex items-center gap-1.5">
+              <Sparkles size={11} /> The read
             </div>
-            <AiText text={r.briefing} />
-          </div>
-
-          {/* Indices */}
-          <div className="card grid md:grid-cols-2 gap-5">
-            <IndexStrip title="Global indices" items={r.indices?.global} />
-            <IndexStrip title="Indian indices" items={r.indices?.india} />
-          </div>
-
-          {/* Movers */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="card space-y-2">
-              <div className="font-semibold text-bull flex items-center gap-2">
-                <TrendingUp size={16} /> Top Gainers
-              </div>
-              {r.gainers?.length ? r.gainers.map((m) => <MoverPill key={m.ticker} m={m} />)
-                : <div className="text-text-secondary text-sm">No data</div>}
+            <div className="max-w-[68ch]">
+              <AiText text={r.briefing} />
             </div>
-            <div className="card space-y-2">
-              <div className="font-semibold text-bear flex items-center gap-2">
-                <TrendingDown size={16} /> Top Losers
-              </div>
-              {r.losers?.length ? r.losers.map((m) => <MoverPill key={m.ticker} m={m} />)
-                : <div className="text-text-secondary text-sm">No data</div>}
-            </div>
+          </article>
+
+          <section className="card grid gap-7 md:grid-cols-2" style={{ '--i': 2 }}>
+            <IndexStrip title="Global" items={r.indices?.global} />
+            <IndexStrip title="India" items={r.indices?.india} />
+          </section>
+
+          <div className="grid gap-4 md:grid-cols-2" style={{ '--i': 3 }}>
+            <MoverCard title="Biggest gainers" items={r.gainers} tone="text-bull" />
+            <MoverCard title="Biggest losers" items={r.losers} tone="text-bear" />
           </div>
 
-          {/* News — Global + India */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <NewsList title="🌐 Global — Important News" items={r.news_global} />
-            <NewsList title="🇮🇳 India — Important News" items={r.news_india} />
+          <div className="grid gap-4 md:grid-cols-2" style={{ '--i': 4 }}>
+            <NewsList region="Global" title="What’s moving world markets" items={r.news_global} />
+            <NewsList region="India" title="What’s moving Indian markets" items={r.news_india} />
           </div>
 
-          <p className="text-xs text-text-secondary">
-            Market commentary generated by AI from live data. Not financial advice.
+          <p className="text-xs text-text-tertiary" style={{ '--i': 5 }}>
+            Commentary written by a model from live data. Analysis, not financial advice.
           </p>
         </>
       )}

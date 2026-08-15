@@ -1,92 +1,130 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Activity, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { api } from '../lib/api';
+import PageHeader from '../components/PageHeader';
+import Segmented from '../components/Segmented';
+import Delta from '../components/Delta';
 
 const REGIONS = [
   { id: 'global', label: 'Global' },
   { id: 'india', label: 'India' },
 ];
 
-function IndexCard({ item }) {
-  const pct = item.change_pct;
-  const up = (pct ?? 0) >= 0;
-  const sym = item.currency_symbol ?? '';
-  const dead = item.price == null;
+/**
+ * Breadth — one bar per index, sized by how far it moved and hung off a
+ * shared zero line.
+ *
+ * This is the market's internals, the thing a trader actually reads first:
+ * a wall of green above the line is a different day from two tall green bars
+ * and eight short red ones, and the shape says so before any number does.
+ */
+function Breadth({ items }) {
+  const [hover, setHover] = useState(null);
+
+  const scored = items.filter((i) => i.change_pct != null);
+  if (!scored.length) return null;
+
+  const maxAbs = Math.max(...scored.map((i) => Math.abs(i.change_pct)), 0.01);
+  const advancing = scored.filter((i) => i.change_pct >= 0).length;
+  const riskOn = advancing * 2 >= scored.length;
+  const shown = hover != null ? scored[hover] : null;
+
   return (
-    <Link
-      to={`/analyze/${encodeURIComponent(item.ticker)}`}
-      className={`card card-3d block ${dead ? 'opacity-60' : up ? 'hover:glow-bull' : 'hover:glow-bear'}`}
-    >
-      <div className="text-text-secondary text-xs truncate">{item.label}</div>
-      <div className="num text-xl mt-1">{dead ? '—' : `${sym}${item.price.toLocaleString()}`}</div>
-      {dead ? (
-        <div className="text-xs text-text-secondary">unavailable</div>
-      ) : (
-        <div className={`num text-sm flex items-center gap-1 ${up ? 'text-bull' : 'text-bear'}`}>
-          {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-          {pct != null ? `${up ? '+' : ''}${pct.toFixed(2)}%` : '—'}
+    <section className="card">
+      {/* One readout line serves the whole strip, so the bars need no labels. */}
+      <div className="flex min-h-[1.75rem] flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        {shown ? (
+          <>
+            <span className="text-sm font-medium text-text-primary">{shown.label}</span>
+            <span className="num text-sm">
+              <span className="text-text-secondary">
+                {shown.currency_symbol ?? ''}{shown.price?.toLocaleString()}
+              </span>
+              <Delta pct={shown.change_pct} bare className="ml-2.5" />
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-sm text-text-secondary">
+              <span className={`font-medium ${riskOn ? 'text-bull' : 'text-bear'}`}>
+                {riskOn ? 'Risk-on' : 'Risk-off'}
+              </span>
+              {' · '}
+              <span className="num text-text-primary">{advancing}</span> of{' '}
+              <span className="num text-text-primary">{scored.length}</span> advancing
+            </span>
+            <span className="eyebrow">Point at a bar</span>
+          </>
+        )}
+      </div>
+
+      <div className="relative mt-4 h-28">
+        <div className="absolute inset-x-0 top-1/2 border-t rule" />
+        <div className="flex h-full items-stretch gap-1.5">
+          {scored.map((i, n) => {
+            const up = i.change_pct >= 0;
+            const h = Math.max(2.5, (Math.abs(i.change_pct) / maxAbs) * 48);
+            return (
+              <Link
+                key={i.ticker}
+                to={`/analyze/${encodeURIComponent(i.ticker)}`}
+                title={`${i.label} ${i.change_pct >= 0 ? '+' : '−'}${Math.abs(i.change_pct).toFixed(2)}%`}
+                className="relative flex-1"
+                onMouseEnter={() => setHover(n)}
+                onMouseLeave={() => setHover(null)}
+                onFocus={() => setHover(n)}
+                onBlur={() => setHover(null)}
+              >
+                <span
+                  className={`absolute inset-x-0 rounded-[3px] transition-[height,opacity] duration-500 ease-spring ${
+                    up ? 'bg-bull' : 'bg-bear'
+                  } ${hover == null || hover === n ? 'opacity-100' : 'opacity-30'}`}
+                  style={up ? { bottom: '50%', height: `${h}%` } : { top: '50%', height: `${h}%` }}
+                />
+              </Link>
+            );
+          })}
         </div>
-      )}
-    </Link>
+      </div>
+    </section>
   );
 }
 
-/** Real movers computed from the live basket — replaces the old hardcoded blurb. */
-function PulseSummary({ items }) {
-  const scored = (items || []).filter((i) => i.change_pct != null);
-  if (!scored.length) return null;
-  const sorted = [...scored].sort((a, b) => b.change_pct - a.change_pct);
-  const best = sorted[0];
-  const worst = sorted[sorted.length - 1];
-  const advancing = scored.filter((i) => i.change_pct >= 0).length;
-  const breadthPct = Math.round((advancing / scored.length) * 100);
-  const riskOn = advancing * 2 >= scored.length;
+function IndexCard({ item }) {
+  const dead = item.price == null;
+  const up = (item.change_pct ?? 0) >= 0;
 
   return (
-    <div className="card space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="font-semibold flex items-center gap-2">
-          <Activity size={16} className="text-primary" /> Market Pulse
+    <Link
+      to={`/analyze/${encodeURIComponent(item.ticker)}`}
+      className={`card card-lift group flex flex-col justify-between gap-3 p-4 ${dead ? 'opacity-50' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="truncate text-xs leading-snug text-text-secondary">{item.label}</span>
+        <ArrowUpRight
+          size={14}
+          className="shrink-0 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100"
+        />
+      </div>
+      <div>
+        <div className="num text-xl font-semibold tracking-tight">
+          {dead ? '—' : `${item.currency_symbol ?? ''}${item.price.toLocaleString()}`}
         </div>
-        <span className={`text-xs px-2 py-1 rounded-md ${riskOn ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'}`}>
-          {riskOn ? 'Risk-on' : 'Risk-off'} · {advancing}/{scored.length} advancing
-        </span>
-      </div>
-
-      <div className="h-2 rounded-full bg-bear/25 overflow-hidden" title={`${breadthPct}% advancing`}>
-        <div className="h-full bg-bull transition-all duration-500" style={{ width: `${breadthPct}%` }} />
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-2">
-        <div className="panel p-3">
-          <div className="text-xs text-text-secondary">Leading</div>
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate">{best.label}</span>
-            <span className="num text-bull shrink-0">+{best.change_pct.toFixed(2)}%</span>
+        {dead ? (
+          <div className="mt-1 text-xs text-text-tertiary">No data</div>
+        ) : (
+          <div className="mt-1.5">
+            <Delta pct={item.change_pct} />
           </div>
-        </div>
-        <div className="panel p-3">
-          <div className="text-xs text-text-secondary">Lagging</div>
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate">{worst.label}</span>
-            <span className={`num shrink-0 ${worst.change_pct >= 0 ? 'text-bull' : 'text-bear'}`}>
-              {worst.change_pct >= 0 ? '+' : ''}{worst.change_pct.toFixed(2)}%
-            </span>
-          </div>
-        </div>
+        )}
       </div>
-
-      <div className="flex flex-wrap gap-2 pt-1">
-        <Link to="/daily" className="btn-ghost text-sm flex items-center gap-1.5">
-          Full briefing &amp; news <ArrowRight size={14} />
-        </Link>
-        <Link to="/picks" className="btn-ghost text-sm flex items-center gap-1.5">
-          Top Picks <ArrowRight size={14} />
-        </Link>
-      </div>
-    </div>
+      {/* A hairline that takes the direction's colour — the card's only chroma when idle. */}
+      <span
+        className={`absolute inset-x-4 bottom-0 h-px ${dead ? 'bg-transparent' : up ? 'bg-bull/40' : 'bg-bear/40'}`}
+      />
+    </Link>
   );
 }
 
@@ -99,41 +137,41 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 animate-rise">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Market Pulse</h1>
-          <p className="text-text-secondary text-sm">
-            {region === 'india'
-              ? 'Indian indices — Nifty, Sensex, Bank Nifty, India VIX'
-              : 'Global indices — US, UK, Germany, Japan, Hong Kong + macro'}{' '}
-            · live, refreshed every 30s
-          </p>
+    <div className="stagger mx-auto max-w-[1400px] space-y-7 p-5 sm:p-8">
+      <div style={{ '--i': 0 }}>
+        <PageHeader
+          eyebrow="Live · refreshed every 30 seconds"
+          title={region === 'india' ? 'Indian markets' : 'Global markets'}
+          lede={
+            region === 'india'
+              ? 'Nifty 50, Sensex, Bank Nifty, Nifty IT, India VIX and the rupee.'
+              : 'US, UK, German, Japanese and Hong Kong indices, plus volatility, gold and bitcoin.'
+          }
+        >
+          <Segmented options={REGIONS} value={region} onChange={setRegion} />
+        </PageHeader>
+      </div>
+
+      {!isLoading && data?.length > 0 && (
+        <div style={{ '--i': 1 }}>
+          <Breadth items={data} />
         </div>
-        <div className="flex gap-1 bg-elevated/60 border border-border rounded-lg p-1">
-          {REGIONS.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRegion(r.id)}
-              className={`px-3 py-1.5 rounded-md text-sm transition ${
-                region === r.id
-                  ? 'bg-primary text-white shadow-glow'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+      )}
+
+      <div style={{ '--i': 2 }} className="space-y-3">
+        <div className="eyebrow">{region === 'india' ? 'Indian' : 'Global'} index levels</div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+          {isLoading
+            ? Array.from({ length: 10 }).map((_, i) => <div key={i} className="skeleton h-[124px]" />)
+            : data?.map((item) => <IndexCard key={item.ticker} item={item} />)}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {isLoading
-          ? Array.from({ length: 10 }).map((_, i) => <div key={i} className="skeleton h-[86px]" />)
-          : data?.map((item) => <IndexCard key={item.ticker} item={item} />)}
+      <div style={{ '--i': 3 }} className="flex flex-wrap gap-2">
+        <Link to="/daily" className="btn-ghost">Today’s briefing</Link>
+        <Link to="/picks" className="btn-ghost">Top picks</Link>
+        <Link to="/analyze" className="btn-ghost">Analyze a symbol</Link>
       </div>
-
-      {!isLoading && <PulseSummary items={data} />}
     </div>
   );
 }

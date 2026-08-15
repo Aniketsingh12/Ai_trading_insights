@@ -59,22 +59,24 @@ export default function TickerSearch({
         spellCheck="false"
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 mt-1.5 z-50 overflow-hidden rounded-xl
-                       border border-border bg-surface/95 backdrop-blur-xl shadow-lift">
+        <ul
+          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-card shadow-pop"
+          style={{ backgroundColor: 'rgba(26,26,31,.94)', backdropFilter: 'blur(28px) saturate(180%)' }}
+        >
           {suggestions.map((s) => (
             <li key={s.ticker}>
               <button
                 type="button"
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition hover:bg-elevated"
+                className="flex w-full items-center gap-3 border-b rule px-3.5 py-3 text-left transition-colors last:border-0 hover:bg-white/[.07]"
                 onMouseDown={(e) => { e.preventDefault(); pick(s.ticker); }}
               >
-                <span className="num font-semibold text-text-primary text-sm w-28 shrink-0 truncate">
+                <span className="w-24 shrink-0 truncate text-sm font-medium text-text-primary">
                   {s.ticker}
                 </span>
-                <span className="text-text-secondary text-sm truncate flex-1">{s.name}</span>
-                <span className="text-xs text-text-secondary shrink-0 hidden sm:inline">{s.exchange}</span>
+                <span className="flex-1 truncate text-sm text-text-secondary">{s.name}</span>
+                <span className="hidden shrink-0 text-xs text-text-tertiary sm:inline">{s.exchange}</span>
                 {s.type && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-elevated text-text-secondary shrink-0">
+                  <span className="eyebrow shrink-0 rounded-md bg-white/[.07] px-1.5 py-1 text-text-secondary">
                     {TYPE_LABEL[s.type] || s.type}
                   </span>
                 )}

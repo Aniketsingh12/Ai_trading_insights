@@ -1,83 +1,110 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
-import { ScoreBadge, Breakdown, RiskReward } from '../components/Score';
+import { ScoreBadge, SignalArc, Breakdown, RiskReward } from '../components/Score';
 import { useBeginner } from '../lib/beginner.jsx';
 import AiText from '../components/AiText';
+import PageHeader from '../components/PageHeader';
+import Segmented from '../components/Segmented';
+import Delta from '../components/Delta';
 
+/**
+ * One row of the ranking. Rank numbers are load-bearing here — the list is an
+ * ordering, so the numeral is information rather than decoration.
+ */
 function PickRow({ p, beginner, rank }) {
   const [open, setOpen] = useState(false);
-  const up = (p.change_pct ?? 0) >= 0;
   const sym = p.currency_symbol ?? '';
+
   return (
-    <div className="card card-3d p-0 overflow-hidden">
+    <div className="border-b rule last:border-0">
       <button
-        className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 hover:bg-elevated/60 text-left transition"
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[.04] sm:px-5"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
       >
-        {rank != null && (
-          <span className="num text-sm text-text-secondary w-5 shrink-0 text-right">{rank}</span>
-        )}
-        {open ? <ChevronDown size={16} className="text-text-secondary shrink-0" />
-              : <ChevronRight size={16} className="text-text-secondary shrink-0" />}
-        <div className="min-w-0 flex-1 sm:flex-none sm:w-32 sm:shrink-0">
-          <div className="font-semibold num truncate">{p.ticker}</div>
-          {/* mobile: show price + change here; desktop: show exchange */}
-          <div className="text-xs text-text-secondary flex gap-2 sm:hidden">
+        <span className="num w-6 shrink-0 text-right text-sm text-text-tertiary">{rank}</span>
+        <ChevronRight
+          size={15}
+          className={`shrink-0 text-text-tertiary transition-transform duration-300 ease-spring ${open ? 'rotate-90' : ''}`}
+        />
+
+        <span className="min-w-0 flex-1 sm:w-40 sm:flex-none">
+          <span className="block truncate text-sm font-medium">{p.ticker}</span>
+          <span className="mt-0.5 flex gap-2 truncate text-xs text-text-tertiary sm:hidden">
             <span className="num">{sym}{p.price?.toLocaleString()}</span>
-            <span className={`num ${up ? 'text-bull' : 'text-bear'}`}>
-              {p.change_pct != null ? `${up ? '+' : ''}${p.change_pct.toFixed(2)}%` : '—'}
-            </span>
-          </div>
-          <div className="text-xs text-text-secondary hidden sm:block truncate">
+            <Delta pct={p.change_pct} bare />
+          </span>
+          <span className="mt-0.5 hidden truncate text-xs text-text-tertiary sm:block">
             {p.name && p.name !== p.ticker ? p.name : p.exchange}
-          </div>
-        </div>
-        {/* desktop-only columns */}
-        <div className="hidden sm:block num text-sm w-24 shrink-0">{sym}{p.price?.toLocaleString()}</div>
-        <div className={`hidden sm:block num text-sm w-20 shrink-0 ${up ? 'text-bull' : 'text-bear'}`}>
-          {p.change_pct != null ? `${up ? '+' : ''}${p.change_pct.toFixed(2)}%` : '—'}
-        </div>
-        <div className="hidden sm:block num text-sm w-24 shrink-0 text-text-secondary">
-          R:R {p.metrics?.risk_reward ?? '—'}
-        </div>
-        <div className="hidden sm:block flex-1" />
+          </span>
+        </span>
+
+        <span className="num hidden w-24 shrink-0 text-sm sm:block">
+          {sym}{p.price?.toLocaleString()}
+        </span>
+        <span className="hidden w-20 shrink-0 sm:block">
+          <Delta pct={p.change_pct} bare className="text-sm" />
+        </span>
+        <span className="num hidden w-16 shrink-0 text-sm text-text-secondary sm:block">
+          {p.metrics?.risk_reward ?? '—'}
+        </span>
+        <span className="hidden flex-1 sm:block" />
+
         <ScoreBadge label={p.label} score={p.score} />
       </button>
 
       {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-border space-y-4">
-          {p.reason && (
-            <div className="panel p-3">
-              <div className="text-xs uppercase tracking-wide text-text-secondary mb-1.5">
-                AI reasoning — why it ranks here
+        <div className="border-t rule bg-black/20 px-4 pb-6 pt-5 sm:px-5">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+            <div>
+              <SignalArc score={p.score} label={p.label} items={p.breakdown} />
+              <Link
+                to={`/analyze/${p.ticker}`}
+                className="btn-ghost mt-2 w-full text-xs"
+              >
+                Open full analysis
+              </Link>
+            </div>
+
+            <div className="space-y-6">
+              {p.reason && (
+                <div className="panel p-4">
+                  <div className="eyebrow mb-2 flex items-center gap-1.5">
+                    <Sparkles size={11} /> Why it ranks here
+                  </div>
+                  <AiText text={p.reason} dense />
+                </div>
+              )}
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <div className="eyebrow mb-3">Trade math</div>
+                  <RiskReward metrics={p.metrics} sym={sym} />
+                </div>
+                {!beginner && (
+                  <div>
+                    <div className="eyebrow mb-3">Where the points came from</div>
+                    <Breakdown items={p.breakdown} />
+                  </div>
+                )}
               </div>
-              <AiText text={p.reason} dense />
+
+              {p.headline && (
+                <a
+                  href={p.headline.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block border-t rule pt-4 text-sm text-text-secondary transition-colors hover:text-text-primary"
+                >
+                  <span className="eyebrow mb-1 block">Latest headline</span>
+                  {p.headline.title}
+                </a>
+              )}
             </div>
-          )}
-          <div className="grid md:grid-cols-2 gap-5">
-          {!beginner && (
-            <div className="space-y-3">
-              <div className="text-xs uppercase tracking-wide text-text-secondary">Why this score</div>
-              <Breakdown items={p.breakdown} />
-            </div>
-          )}
-          <div className={`space-y-3 ${beginner ? 'md:col-span-2' : ''}`}>
-            <div className="text-xs uppercase tracking-wide text-text-secondary">Trade math</div>
-            <RiskReward metrics={p.metrics} sym={sym} />
-            {p.headline && (
-              <a href={p.headline.url} target="_blank" rel="noreferrer"
-                 className="block text-xs text-primary hover:underline mt-2">
-                📰 {p.headline.title}
-              </a>
-            )}
-            <Link to={`/analyze/${p.ticker}`} className="text-xs text-text-secondary hover:text-primary">
-              Open full analysis →
-            </Link>
-          </div>
           </div>
         </div>
       )}
@@ -124,7 +151,7 @@ export default function TopPicks() {
 
   function runWatchlist() {
     const tickers = watch?.tickers || [];
-    if (!tickers.length) { toast('Your watchlist is empty — add tickers or type some below.'); return; }
+    if (!tickers.length) { toast('Your watchlist is empty — add symbols, or type some below.'); return; }
     rankM.mutate(tickers);
   }
 
@@ -140,43 +167,31 @@ export default function TopPicks() {
   const summary = data?.summary || '';
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 animate-rise">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Sparkles size={20} className="text-primary" /> Top Picks
-          </h1>
-          <p className="text-text-secondary text-sm">
-            {showTop
-              ? `Top 10 from the ${region === 'india' ? 'Indian' : 'global'} large-cap universe, ranked by a 0–100 score (Trend · Momentum · Risk/Reward · Sentiment) with AI reasons. Not advice.`
-              : 'Your custom ranking. Switch a region below to return to the auto Top 10.'}
-          </p>
-        </div>
-        <div className="flex gap-1 bg-elevated/60 border border-border rounded-lg p-1">
-          {REGIONS.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => pickRegion(r.id)}
-              className={`px-3 py-1.5 rounded-md text-sm transition ${
-                showTop && region === r.id ? 'bg-primary text-white shadow-glow' : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+    <div className="stagger mx-auto max-w-[1400px] space-y-7 p-5 sm:p-8">
+      <div style={{ '--i': 0 }}>
+        <PageHeader
+          eyebrow={showTop ? `${region === 'india' ? 'Indian' : 'Global'} large caps · rescanned every 10 minutes` : 'Your ranking'}
+          title="Top picks"
+          lede={
+            showTop
+              ? 'Every symbol in the universe scored 0–100 on trend, momentum, risk/reward and sentiment, then ranked. The arithmetic is plain Python; a model explains the ordering afterwards.'
+              : 'Your own list, scored on the same four factors. Switch region to return to the automatic top ten.'
+          }
+        >
+          <Segmented options={REGIONS} value={showTop ? region : ''} onChange={pickRegion} />
+        </PageHeader>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <form onSubmit={runCustom} className="flex gap-2 flex-1 min-w-[280px]">
+      <div className="flex flex-wrap items-center gap-2" style={{ '--i': 1 }}>
+        <form onSubmit={runCustom} className="flex min-w-[280px] flex-1 gap-2">
           <input
             className="input flex-1"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Or rank your own — AAPL, MSFT, RELIANCE.NS, BTC-USD"
+            placeholder="Rank your own — AAPL, MSFT, RELIANCE.NS, BTC-USD"
           />
-          <button className="btn" type="submit" disabled={loading}>
-            {rankM.isPending ? 'Scoring…' : 'Rank'}
+          <button className="btn shrink-0" type="submit" disabled={loading}>
+            {rankM.isPending ? <><Loader2 size={14} className="animate-spin" /> Scoring…</> : 'Rank'}
           </button>
         </form>
         <button className="btn-ghost" onClick={runWatchlist} disabled={loading}>
@@ -185,34 +200,46 @@ export default function TopPicks() {
       </div>
 
       {loading && (
-        <div className="text-text-secondary text-sm">
-          Scoring {showTop ? `the ${region} universe` : `${parse(text).length || (watch?.tickers?.length ?? 0)} tickers`}… (gathering data + AI reasons)
+        <div className="space-y-2" style={{ '--i': 2 }}>
+          <p className="flex items-center gap-2 text-sm text-text-secondary">
+            <Loader2 size={14} className="animate-spin" />
+            Scoring {showTop ? `the ${region} universe` : `${parse(text).length || (watch?.tickers?.length ?? 0)} symbols`} — pulling a year of candles, then asking for reasons.
+          </p>
+          <div className="skeleton h-[560px]" />
         </div>
       )}
 
       {summary && !loading && (
-        <div className="card bg-primary/5 border-primary/30">
-          <div className="text-xs uppercase tracking-wide text-primary mb-1.5 flex items-center gap-1.5">
-            <Sparkles size={13} /> AI ranking summary
+        <section className="card" style={{ '--i': 2 }}>
+          <div className="eyebrow mb-2.5 flex items-center gap-1.5">
+            <Sparkles size={11} /> How this ranking came out
           </div>
-          <AiText text={summary} dense />
-        </div>
+          <AiText text={summary} />
+        </section>
       )}
 
-      {picks.length > 0 && (
-        <div className="space-y-2">
-          <div className="hidden sm:flex items-center gap-3 px-4 text-xs uppercase tracking-wide text-text-secondary">
-            <span className="w-4" /><span className="w-4" /><span className="w-32">Ticker</span>
-            <span className="w-24">Price</span><span className="w-20">Today</span>
-            <span className="w-24">Risk/Rew</span><span className="flex-1" /><span>Score</span>
+      {picks.length > 0 && !loading && (
+        <div className="space-y-2" style={{ '--i': 3 }}>
+          <div className="hidden items-center gap-3 px-5 sm:flex">
+            <span className="w-6" />
+            <span className="w-[15px]" />
+            <span className="eyebrow w-40">Symbol</span>
+            <span className="eyebrow w-24">Price</span>
+            <span className="eyebrow w-20">Today</span>
+            <span className="eyebrow w-16">R : R</span>
+            <span className="flex-1" />
+            <span className="eyebrow">Score</span>
           </div>
-          {picks.map((p, i) => <PickRow key={p.ticker} p={p} rank={i + 1} beginner={beginner} />)}
+          <div className="card overflow-hidden p-0">
+            {picks.map((p, i) => <PickRow key={p.ticker} p={p} rank={i + 1} beginner={beginner} />)}
+          </div>
         </div>
       )}
 
       {!loading && data && picks.length === 0 && (
-        <div className="card text-text-secondary text-sm">
-          No valid data right now (the free data source may be rate-limited — try again shortly).
+        <div className="card text-sm text-text-secondary" style={{ '--i': 3 }}>
+          Nothing came back with usable data. The free price feed rate-limits in bursts — try again
+          in a minute.
         </div>
       )}
     </div>

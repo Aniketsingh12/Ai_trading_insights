@@ -19,6 +19,13 @@ const VERDICT_TONE = {
   'STRONG SELL': 'text-bear',
 };
 
+/*
+ * Everything a model wrote is set in the serif, and nothing else in the app is.
+ * That split is the whole convention: serif means a mind reasoned its way here,
+ * the tabular sans means the market reported it. You can tell prose from fact
+ * without reading either.
+ */
+
 // Inline: **bold**, *italic*, `code`
 function inline(text, keyPrefix = 'i') {
   const nodes = [];
@@ -33,7 +40,11 @@ function inline(text, keyPrefix = 'i') {
     if (tok.startsWith('**')) {
       nodes.push(<strong key={key} className="font-semibold text-text-primary">{tok.slice(2, -2)}</strong>);
     } else if (tok.startsWith('`')) {
-      nodes.push(<code key={key} className="num text-xs bg-border/60 rounded px-1 py-0.5">{tok.slice(1, -1)}</code>);
+      nodes.push(
+        <code key={key} className="mono rounded bg-white/[.08] px-1.5 py-0.5 text-[.85em] text-text-primary">
+          {tok.slice(1, -1)}
+        </code>
+      );
     } else {
       nodes.push(<em key={key}>{tok.slice(1, -1)}</em>);
     }
@@ -121,27 +132,28 @@ export default function AiText({ text, className = '', dense = false }) {
   }
   flushAll();
 
-  const gap = dense ? 'space-y-1.5' : 'space-y-3';
+  const body = dense ? 'text-sm leading-[1.6]' : 'text-[15px] leading-[1.68]';
 
   return (
-    <div className={`${gap} text-sm leading-relaxed text-text-secondary ${className}`}>
+    <div className={`serif ${dense ? 'space-y-2' : 'space-y-3.5'} text-text-secondary ${className}`}>
       {blocks.map((b, i) => {
         if (b.type === 'h') {
+          // Section labels stay in the interface sans — they're structure, not voice.
           return (
-            <h4 key={i} className="text-xs font-semibold uppercase tracking-wide text-primary pt-1">
+            <h4 key={i} className="eyebrow pt-2 font-sans text-text-secondary">
               {b.text}
             </h4>
           );
         }
         if (b.type === 'verdict') {
           return (
-            <div key={i} className="flex flex-wrap items-baseline gap-2 pt-1">
-              <span className="text-xs uppercase tracking-wide text-text-secondary">Verdict</span>
-              <span className={`font-bold ${VERDICT_TONE[b.verdict] || 'text-text-primary'}`}>
+            <div key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-1">
+              <span className="eyebrow font-sans">Verdict</span>
+              <span className={`text-xl ${VERDICT_TONE[b.verdict] || 'text-text-primary'}`}>
                 {b.verdict}
               </span>
               {b.rest && b.rest.toUpperCase() !== b.verdict && (
-                <span className="text-text-secondary">{inline(b.rest, `v${i}`)}</span>
+                <span className={body}>{inline(b.rest, `v${i}`)}</span>
               )}
             </div>
           );
@@ -151,13 +163,13 @@ export default function AiText({ text, className = '', dense = false }) {
           return (
             <Tag
               key={i}
-              className={`${b.ordered ? 'list-decimal' : 'list-disc'} pl-5 space-y-1 marker:text-text-secondary`}
+              className={`${b.ordered ? 'list-decimal' : 'list-disc'} space-y-1.5 pl-5 ${body} marker:text-text-tertiary`}
             >
               {b.items.map((it, j) => <li key={j}>{inline(it, `l${i}-${j}`)}</li>)}
             </Tag>
           );
         }
-        return <p key={i}>{inline(b.text, `p${i}`)}</p>;
+        return <p key={i} className={body}>{inline(b.text, `p${i}`)}</p>;
       })}
     </div>
   );

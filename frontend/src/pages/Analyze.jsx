@@ -3,52 +3,61 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { createChart } from 'lightweight-charts';
 import toast from 'react-hot-toast';
+import { Loader2, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
-import { ScoreBadge, Breakdown, RiskReward } from '../components/Score';
+import { ScoreBadge, SignalArc, Breakdown, RiskReward } from '../components/Score';
 import InfoTip from '../components/InfoTip';
 import AiText from '../components/AiText';
 import TickerSearch from '../components/TickerSearch';
+import Delta from '../components/Delta';
 import { useBeginner } from '../lib/beginner.jsx';
+
+const VERDICT_TONE = {
+  'STRONG BUY': 'text-bull', BUY: 'text-bull', HOLD: 'text-warn',
+  SELL: 'text-bear', 'STRONG SELL': 'text-bear',
+};
 
 function SentimentBadge({ analysis }) {
   if (!analysis) return null;
   const txt = analysis.toUpperCase();
-  let label = 'NEUTRAL', cls = 'bg-warn/20 text-warn';
-  if (txt.includes('BULLISH')) { label = 'BULLISH'; cls = 'bg-bull/20 text-bull'; }
-  else if (txt.includes('BEARISH')) { label = 'BEARISH'; cls = 'bg-bear/20 text-bear'; }
-  return <span className={`px-2 py-1 rounded text-xs font-semibold ${cls}`}>{label}</span>;
+  let label = 'NEUTRAL', tone = 'text-warn', bg = 'rgba(255,212,38,.12)';
+  if (txt.includes('BULLISH')) { label = 'BULLISH'; tone = 'text-bull'; bg = 'rgba(48,209,88,.12)'; }
+  else if (txt.includes('BEARISH')) { label = 'BEARISH'; tone = 'text-bear'; bg = 'rgba(255,69,58,.12)'; }
+  return (
+    <span className={`rounded-pill px-2.5 py-1 text-xs font-semibold ${tone}`} style={{ backgroundColor: bg }}>
+      {label}
+    </span>
+  );
 }
-
-const VERDICT_STYLES = {
-  'STRONG BUY': 'bg-bull/25 text-bull',
-  BUY: 'bg-bull/20 text-bull',
-  HOLD: 'bg-warn/20 text-warn',
-  SELL: 'bg-bear/20 text-bear',
-  'STRONG SELL': 'bg-bear/25 text-bear',
-};
 
 function VerdictBadge({ verdict }) {
   if (!verdict) return null;
-  const cls = VERDICT_STYLES[verdict] || 'bg-border text-text-secondary';
-  return <span className={`px-3 py-1 rounded-md text-sm font-bold ${cls}`}>{verdict}</span>;
+  return <span className={`serif text-lg ${VERDICT_TONE[verdict] || 'text-text-secondary'}`}>{verdict}</span>;
 }
 
-const AGENT_ICON = { pending: '○', running: '◉', done: '✓', error: '✕' };
-const AGENT_COLOR = { pending: 'text-text-secondary', running: 'text-primary', done: 'text-bull', error: 'text-bear' };
-
+/** Five analysts working. Status is carried by the dot, not by a word per row. */
 function AgentProgress({ agents }) {
   return (
-    <div className="space-y-1.5 text-sm">
-      {agents.map((a) => (
-        <div key={a.name} className="flex items-center gap-2">
-          <span className={`num ${AGENT_COLOR[a.status]} ${a.status === 'running' ? 'animate-pulse' : ''}`}>
-            {AGENT_ICON[a.status]}
-          </span>
-          <span className="text-text-primary">{a.name}</span>
-          <span className="text-text-secondary text-xs ml-auto capitalize">{a.status}</span>
-        </div>
-      ))}
-    </div>
+    <ol className="space-y-2.5">
+      {agents.map((a) => {
+        const done = a.status === 'done';
+        const err = a.status === 'error';
+        const running = a.status === 'running';
+        return (
+          <li key={a.name} className="flex items-center gap-2.5 text-sm">
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                done ? 'bg-bull' : err ? 'bg-bear' : running ? 'animate-pulse bg-primary' : 'bg-white/20'
+              }`}
+            />
+            <span className={done || running ? 'text-text-primary' : 'text-text-tertiary'}>{a.name}</span>
+            {running && <Loader2 size={13} className="ml-auto animate-spin text-text-tertiary" />}
+            {done && <span className="ml-auto text-xs text-text-tertiary">done</span>}
+            {err && <span className="ml-auto text-xs text-bear">failed</span>}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -57,19 +66,21 @@ function Chart({ data }) {
   useEffect(() => {
     if (!ref.current || !data?.length) return;
     const chart = createChart(ref.current, {
-      // Transparent so the frosted card and aurora show through the chart.
-      layout: { background: { color: 'transparent' }, textColor: '#94a3b8' },
-      grid: { vertLines: { color: 'rgba(35,35,56,.6)' }, horzLines: { color: 'rgba(35,35,56,.6)' } },
-      rightPriceScale: { borderColor: 'rgba(35,35,56,.9)' },
-      timeScale: { borderColor: 'rgba(35,35,56,.9)' },
-      crosshair: { vertLine: { color: '#6366f1' }, horzLine: { color: '#6366f1' } },
+      layout: { background: { color: 'transparent' }, textColor: '#8a8a93', fontFamily: 'Instrument Sans, sans-serif' },
+      grid: { vertLines: { visible: false }, horzLines: { color: 'rgba(255,255,255,.05)' } },
+      rightPriceScale: { borderVisible: false },
+      timeScale: { borderVisible: false },
+      crosshair: {
+        vertLine: { color: 'rgba(242,242,245,.35)', labelBackgroundColor: '#24242b' },
+        horzLine: { color: 'rgba(242,242,245,.35)', labelBackgroundColor: '#24242b' },
+      },
       width: ref.current.clientWidth,
-      height: 360,
+      height: 380,
     });
     const series = chart.addCandlestickSeries({
-      upColor: '#22c55e', downColor: '#ef4444',
-      borderUpColor: '#22c55e', borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e', wickDownColor: '#ef4444',
+      upColor: '#30d158', downColor: '#ff453a',
+      borderUpColor: '#30d158', borderDownColor: '#ff453a',
+      wickUpColor: 'rgba(48,209,88,.6)', wickDownColor: 'rgba(255,69,58,.6)',
     });
     series.setData(data.map((c) => ({
       time: c.date.slice(0, 10),
@@ -145,7 +156,7 @@ export default function Analyze() {
     try {
       const { report_id } = await api.deepResearch(ticker);
       setReportId(report_id);
-      toast.success('Deep research started — 5 agents running');
+      toast.success('Deep research started — five analysts running');
     } catch (e) {
       toast.error(`Could not start: ${e.message}`);
     }
@@ -168,157 +179,190 @@ export default function Analyze() {
     setResult(null);
   }, []);
 
-  const up = (quote?.change_pct ?? 0) >= 0;
   const sym = quote?.currency_symbol ?? '$';
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 animate-rise">
-      <form onSubmit={submit} className="flex gap-2 max-w-2xl">
+    <div className="stagger mx-auto max-w-[1400px] space-y-6 p-5 sm:p-8">
+      <form onSubmit={submit} className="flex max-w-2xl gap-2" style={{ '--i': 0 }}>
         <TickerSearch className="flex-1" value={input} onChange={setInput} onSelect={handleSelect} />
-        <button className="btn" type="submit">Load</button>
+        <button className="btn shrink-0" type="submit">Load</button>
       </form>
 
-      <div className="flex items-baseline gap-3 flex-wrap">
-        <h1 className="text-3xl font-bold tracking-tight">{ticker}</h1>
-        {quote?.exchange && (
-          <span className="text-xs px-2 py-0.5 rounded-md border border-border bg-elevated/70 text-text-secondary">
-            {quote.exchange} · {quote.region}
-          </span>
-        )}
+      {/* Quote header — the symbol, priced, as large as it deserves to be. */}
+      <header style={{ '--i': 1 }}>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{ticker}</h1>
+          {/* On a lifted chip the eyebrow's own grey drops below AA, so it steps up one. */}
+          {quote?.exchange && (
+            <span className="eyebrow rounded-pill bg-white/[.06] px-2.5 py-1 text-text-secondary">
+              {quote.exchange} · {quote.region}
+            </span>
+          )}
+        </div>
         {quote?.price != null && (
-          <>
-            <span className="num text-2xl">{sym}{quote.price.toFixed(2)}</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span className="num text-figure font-semibold">{sym}{quote.price.toFixed(2)}</span>
             {quote.change != null && (
-              <span
-                className={`num text-sm px-2 py-0.5 rounded-md ${
-                  up ? 'bg-bull/15 text-bull' : 'bg-bear/15 text-bear'
-                }`}
-              >
-                {up ? '+' : ''}{quote.change.toFixed(2)} ({quote.change_pct?.toFixed(2)}%)
+              <span className="flex items-baseline gap-2">
+                <span className={`num text-lg ${quote.change >= 0 ? 'text-bull' : 'text-bear'}`}>
+                  {quote.change >= 0 ? '+' : '−'}{Math.abs(quote.change).toFixed(2)}
+                </span>
+                <Delta pct={quote.change_pct} />
               </span>
             )}
-          </>
+          </div>
         )}
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 card p-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3" style={{ '--i': 2 }}>
+        <div className="card p-3 lg:col-span-2">
           <Chart data={ohlcv} />
         </div>
 
-        <div className="space-y-4">
-          {/* Score + Risk/Reward */}
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">Signal Score &amp; Trade Math</div>
+        <div className="space-y-5">
+          {/* Signal score — the arc leads, the numbers follow. */}
+          <section className="card">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">
+                Signal score <InfoTip text="A 0–100 reading computed in plain Python from price, momentum, trade math and sentiment. No model involved." />
+              </h2>
               {scored?.label && <ScoreBadge label={scored.label} score={scored.score} />}
             </div>
-            {scoreLoading && <div className="text-text-secondary text-sm">Scoring…</div>}
+
+            {scoreLoading && <div className="skeleton mt-4 h-44" />}
+
             {scored?.metrics && !scored.metrics.error && (
               <>
+                <SignalArc
+                  score={scored.score}
+                  label={scored.label}
+                  items={scored.breakdown}
+                  className="mt-2"
+                />
+
                 {reason ? (
-                  <div className="panel p-3">
-                    <div className="text-xs uppercase tracking-wide text-text-secondary mb-1.5">AI reasoning</div>
+                  <div className="panel mt-1 p-3.5">
+                    <div className="eyebrow mb-2 flex items-center gap-1.5">
+                      <Sparkles size={11} /> Why
+                    </div>
                     <AiText text={reason} dense />
                   </div>
                 ) : (
                   <button
-                    className="btn-ghost w-full text-sm"
+                    className="btn-ghost mt-1 w-full"
                     disabled={explaining}
                     onClick={() => setExplainFor(ticker)}
                   >
-                    {explaining ? 'Thinking…' : 'Explain this score with AI'}
+                    {explaining ? <><Loader2 size={14} className="animate-spin" /> Thinking…</> : 'Explain this score'}
                   </button>
                 )}
-                <RiskReward metrics={scored.metrics} sym={sym} />
+
+                <div className="mt-5 border-t rule pt-4">
+                  <RiskReward metrics={scored.metrics} sym={sym} />
+                </div>
+
                 {!beginner && (
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-text-secondary">Why this score ({scored.score}/100)</summary>
-                    <div className="mt-3"><Breakdown items={scored.breakdown} /></div>
+                  <details className="group mt-4 border-t rule pt-4">
+                    <summary className="cursor-pointer list-none text-sm text-text-secondary transition-colors hover:text-text-primary">
+                      <span className="inline-block transition-transform group-open:rotate-90">›</span>{' '}
+                      Where the {scored.score} points came from
+                    </summary>
+                    <div className="mt-4"><Breakdown items={scored.breakdown} /></div>
                   </details>
                 )}
               </>
             )}
-            {scored && scored.metrics?.error && (
-              <div className="text-text-secondary text-sm">No price data to score this symbol.</div>
+
+            {scored?.metrics?.error && (
+              <p className="mt-3 text-sm text-text-secondary">No price history to score this symbol.</p>
             )}
-          </div>
+          </section>
 
           {/* Quick analysis */}
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">AI Quick Analysis</div>
+          <section className="card space-y-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Quick read</h2>
               <SentimentBadge analysis={result?.analysis} />
             </div>
+            <p className="text-xs leading-relaxed text-text-tertiary">
+              One model pass over the current indicators. Seconds, not minutes.
+            </p>
             <button className="btn w-full" disabled={running} onClick={runQuick}>
-              {running ? 'Analyzing…' : 'Run Quick Analysis'}
+              {running ? <><Loader2 size={14} className="animate-spin" /> Reading…</> : 'Run quick read'}
             </button>
+
             {!beginner && result?.indicators && (
-              <div className="text-xs grid grid-cols-2 gap-2 num">
-                <div className="flex items-center gap-1">RSI <InfoTip term="rsi" />: <span className="text-text-primary">{result.indicators.rsi ?? '—'}</span></div>
-                <div className="flex items-center gap-1">MACD <InfoTip term="macd" />: <span className="text-text-primary">{result.indicators.macd ?? '—'}</span></div>
-                <div className="flex items-center gap-1">SMA50 <InfoTip term="sma50" />: <span className="text-text-primary">{result.indicators.sma50 ?? '—'}</span></div>
-                <div className="flex items-center gap-1">SMA200 <InfoTip term="sma200" />: <span className="text-text-primary">{result.indicators.sma200 ?? '—'}</span></div>
-              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t rule pt-3.5 text-xs">
+                {[
+                  ['RSI', 'rsi', result.indicators.rsi],
+                  ['MACD', 'macd', result.indicators.macd],
+                  ['SMA 50', 'sma50', result.indicators.sma50],
+                  ['SMA 200', 'sma200', result.indicators.sma200],
+                ].map(([label, term, value]) => (
+                  <div key={term} className="flex items-baseline justify-between gap-2">
+                    <dt className="flex items-center gap-1 text-text-secondary">{label} <InfoTip term={term} /></dt>
+                    <dd className="num text-text-primary">{value ?? '—'}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
+
             {result?.analysis && (
-              <div className="border-t border-border pt-3">
-                <AiText text={result.analysis} />
-              </div>
+              <div className="border-t rule pt-3.5"><AiText text={result.analysis} /></div>
             )}
-          </div>
+          </section>
 
           {/* Deep research */}
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">Deep Research (5 agents)</div>
+          <section className="card space-y-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Deep research</h2>
               {report?.verdict && <VerdictBadge verdict={report.verdict} />}
             </div>
-            <button
-              className="btn w-full"
-              disabled={report?.status === 'running'}
-              onClick={runDeep}
-            >
-              {report?.status === 'running' ? 'Agents running…' : 'Run Deep Research'}
+            <p className="text-xs leading-relaxed text-text-tertiary">
+              Five analysts — research, technical, sentiment and risk — then a sixth pass that
+              reconciles them into one verdict.
+            </p>
+            <button className="btn w-full" disabled={report?.status === 'running'} onClick={runDeep}>
+              {report?.status === 'running'
+                ? <><Loader2 size={14} className="animate-spin" /> Analysts working…</>
+                : 'Run deep research'}
             </button>
-            {report?.agents && <AgentProgress agents={report.agents} />}
-            {report?.status === 'error' && (
-              <div className="text-bear text-sm">Failed: {report.error}</div>
+            {report?.agents && (
+              <div className="border-t rule pt-3.5"><AgentProgress agents={report.agents} /></div>
             )}
-          </div>
+            {report?.status === 'error' && (
+              <p className="text-sm text-bear">Failed: {report.error}</p>
+            )}
+          </section>
         </div>
       </div>
 
-      {/* Full report */}
+      {/* The finished report */}
       {report?.status === 'done' && report?.report && (
-        <div className="space-y-4">
-          <div className="card space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-lg font-bold">Deep Research — {report.ticker}</h2>
+        <div className="space-y-4" style={{ '--i': 3 }}>
+          <article className="card">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 border-b rule pb-4">
+              <h2 className="text-lg font-semibold">Deep research — {report.ticker}</h2>
               <VerdictBadge verdict={report.verdict} />
             </div>
-            <AiText text={report.report} />
-            <p className="text-xs text-text-secondary border-t border-border pt-3">
-              Generated by {report.agents?.length ?? 5} AI analysts from live market data.
+            <div className="pt-4"><AiText text={report.report} /></div>
+            <p className="mt-5 border-t rule pt-4 text-xs text-text-tertiary">
+              Written by {report.agents?.length ?? 5} analysts from live market data.
               Informational analysis, not financial advice.
             </p>
-          </div>
+          </article>
 
           {!beginner && report.sections?.length > 0 && (
             <div className="space-y-2">
-              <div className="text-xs uppercase tracking-wide text-text-secondary px-1">
-                Individual analyst reports
-              </div>
+              <div className="eyebrow px-1">Individual analysts</div>
               {report.sections.map((s) => (
-                <details key={s.agent} className="card card-3d p-0 overflow-hidden group">
-                  <summary className="cursor-pointer px-4 py-3 hover:bg-elevated/60 transition flex items-center gap-2">
-                    <span className="text-text-secondary group-open:rotate-90 transition-transform">›</span>
-                    <span className="font-semibold text-sm">{s.agent}</span>
-                    <span className="text-xs text-text-secondary">· {s.role}</span>
+                <details key={s.agent} className="card group overflow-hidden p-0">
+                  <summary className="flex cursor-pointer list-none items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-white/[.04]">
+                    <span className="text-text-tertiary transition-transform group-open:rotate-90">›</span>
+                    <span className="text-sm font-medium">{s.agent}</span>
+                    <span className="text-xs text-text-tertiary">{s.role}</span>
                   </summary>
-                  <div className="px-4 pb-4 pt-1 border-t border-border">
-                    <AiText text={s.output} />
-                  </div>
+                  <div className="border-t rule px-5 pb-5 pt-4"><AiText text={s.output} /></div>
                 </details>
               ))}
             </div>

@@ -24,7 +24,22 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <BeginnerProvider>
           <App />
-          <Toaster position="top-right" toastOptions={{ style: { background: '#12121a', color: '#f1f5f9' } }} />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: 'rgba(36,36,43,.92)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                color: '#f2f2f5',
+                border: '1px solid rgba(255,255,255,.09)',
+                borderRadius: '14px',
+                fontSize: '14px',
+                boxShadow: '0 24px 64px -16px rgba(0,0,0,.92)',
+              },
+              success: { iconTheme: { primary: '#30d158', secondary: '#0a0a0c' } },
+              error: { iconTheme: { primary: '#ff453a', secondary: '#0a0a0c' } },
+            }}
+          />
         </BeginnerProvider>
       </BrowserRouter>
     </QueryClientProvider>

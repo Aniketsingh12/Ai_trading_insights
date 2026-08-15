@@ -2,90 +2,211 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
-body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: theme('colors.bg');
-  /* Static depth wash behind the animated aurora layer. */
-  background-image:
-    radial-gradient(60rem 40rem at 85% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
-    radial-gradient(50rem 35rem at 5% 105%, rgba(34, 211, 238, 0.07), transparent 60%);
-  background-attachment: fixed;
-}
-.num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-
-/* ---------- depth surfaces ---------- */
 /*
- * Cards are frosted glass sitting above the aurora: a translucent fill, a hairline
- * top highlight (the `sheen` gradient) so the top edge catches light, and a
- * two-layer shadow for contact + ambient occlusion.
+ * ═══════════════════════════════════════════════════════════════════
+ *  Instrument — the material layer
+ *
+ *  Two rules govern everything below.
+ *
+ *  1. Colour means direction. Green is up, red is down, and nothing
+ *     else in the interface is allowed a hue — no brand accent, no
+ *     gradient. Emphasis is bone-on-graphite instead, so a +0.4% is
+ *     never competing with decoration for the eye.
+ *
+ *  2. Depth is lightness. A raised surface is a lighter surface with a
+ *     hairline catching light along its top edge. Shadows are reserved
+ *     for things that genuinely float above the page.
+ * ═══════════════════════════════════════════════════════════════════
  */
-.card {
-  @apply relative rounded-xl p-4 border border-border shadow-depth;
-  background-color: rgb(16 16 25 / 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.card::before {
-  content: '';
-  @apply absolute inset-0 rounded-xl pointer-events-none bg-sheen;
-}
-.card > * { position: relative; }
 
-/* Interactive cards lift and tilt very slightly toward the viewer on hover. */
-.card-3d {
-  transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease, border-color .25s ease;
-  transform-origin: center bottom;
+html, body, #root { height: 100%; }
+
+body {
+  font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  background-color: theme('colors.bg');
+  /* One cold wash from the top-left, fixed. Replaces the drifting blobs:
+     a single light source is what makes the lightness ladder legible. */
+  background-image: radial-gradient(80rem 50rem at 12% -18%, rgba(255, 255, 255, .045), transparent 62%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Type roles ──────────────────────────────────────────────────── */
+
+/*
+ * Every market figure. Tabular so columns of prices align and a ticking
+ * number doesn't jitter — but still the interface sans, not a monospace.
+ * A trading terminal looks like a terminal; this is meant to look like an
+ * instrument.
+ */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'cv05' 1;
+  letter-spacing: -0.01em;
+}
+
+/* Dense tabular columns — the portfolio and watchlist grids only. */
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* The model's voice. Reserved for prose a model wrote and verdicts it reached. */
+.serif { font-family: 'Instrument Serif', Georgia, serif; letter-spacing: 0; }
+
+/* Engraved markings: section labels, column heads, units. Never bold. */
+.eyebrow {
+  @apply text-micro uppercase text-text-tertiary font-medium;
+}
+
+.display { @apply text-display font-semibold; }
+
+/* ── Surfaces ────────────────────────────────────────────────────── */
+
+.card {
+  @apply relative rounded-card p-5 shadow-depth;
+  background-color: theme('colors.surface');
+  border: 1px solid rgba(255, 255, 255, .06);
+}
+
+/* A card you can act on: it steps one rung up the lightness ladder. */
+.card-lift {
+  transition: background-color .3s theme('transitionTimingFunction.spring'),
+              box-shadow .3s theme('transitionTimingFunction.spring'),
+              border-color .3s theme('transitionTimingFunction.spring'),
+              transform .3s theme('transitionTimingFunction.spring');
 }
 @media (hover: hover) {
-  .card-3d:hover {
-    transform: translateY(-3px) perspective(900px) rotateX(2.5deg);
-    @apply shadow-lift border-primary/40;
+  .card-lift:hover {
+    background-color: theme('colors.elevated');
+    border-color: rgba(255, 255, 255, .12);
+    @apply shadow-lift;
+    transform: translateY(-2px);
   }
 }
+.card-lift:active { transform: translateY(0); }
 
-/* Panel nested inside a card — sits "deeper", so it's darker and inset. */
+/* A well sunk *into* a card — darker, with the light falling on its inner top edge. */
 .panel {
-  @apply rounded-lg border border-border/70 shadow-inset;
-  background-color: rgb(7 7 12 / 0.55);
+  @apply rounded-ctl shadow-well;
+  background-color: rgba(0, 0, 0, .28);
+  border: 1px solid rgba(255, 255, 255, .045);
 }
 
-/* ---------- controls ---------- */
-.btn {
-  @apply relative px-4 py-2 rounded-lg font-medium text-white transition
-         shadow-depth active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed;
-  background-image: linear-gradient(180deg, #7275f5, #5457e8);
+/* Vibrancy. Sidebar, top bar, tab bar — content scrolls beneath them. */
+.material {
+  background-color: rgba(19, 19, 22, .72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
 }
-.btn:not(:disabled):hover { @apply shadow-glow; filter: brightness(1.08); }
+@supports not (backdrop-filter: blur(1px)) {
+  .material { background-color: rgba(19, 19, 22, .97); }
+}
+
+.rule { border-color: rgba(255, 255, 255, .07); }
+
+/* ── Controls ────────────────────────────────────────────────────── */
+
+/*
+ * The prominent button is bone on ink. With no brand hue in the system,
+ * the strongest thing available is full luminance — which is also the
+ * loudest, so there is at most one per view.
+ */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-pill px-4 py-2
+         text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed;
+  background-color: theme('colors.primary');
+  color: theme('colors.bg');
+  transition-timing-function: theme('transitionTimingFunction.spring');
+}
+.btn:not(:disabled):hover { background-color: #ffffff; }
+.btn:not(:disabled):active { transform: scale(.97); }
 
 .btn-ghost {
-  @apply px-4 py-2 rounded-lg border border-border bg-elevated/60 text-text-primary
-         transition hover:border-primary/50 hover:bg-elevated active:translate-y-px
-         disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center gap-2 rounded-pill px-4 py-2
+         text-sm font-medium text-text-primary transition
+         disabled:opacity-40 disabled:cursor-not-allowed;
+  background-color: rgba(255, 255, 255, .07);
+  transition-timing-function: theme('transitionTimingFunction.spring');
 }
+.btn-ghost:not(:disabled):hover { background-color: rgba(255, 255, 255, .13); }
+.btn-ghost:not(:disabled):active { transform: scale(.97); }
 
 .input {
-  @apply rounded-lg border border-border px-3 py-2 text-text-primary shadow-inset
-         placeholder:text-text-secondary focus:outline-none focus:border-primary
-         focus:ring-2 focus:ring-primary/25 transition;
-  background-color: rgb(7 7 12 / 0.6);
+  @apply w-full rounded-ctl px-3.5 py-2.5 text-sm text-text-primary shadow-well
+         placeholder:text-text-tertiary focus:outline-none;
+  background-color: rgba(0, 0, 0, .32);
+  border: 1px solid rgba(255, 255, 255, .07);
+  transition: border-color .2s theme('transitionTimingFunction.spring'),
+              box-shadow .2s theme('transitionTimingFunction.spring');
+}
+.input:focus {
+  border-color: rgba(255, 255, 255, .28);
+  box-shadow: theme('boxShadow.well'), 0 0 0 3px rgba(255, 255, 255, .08);
 }
 
-/* ---------- accents ---------- */
-.glow-bull { @apply shadow-glow-bull; }
-.glow-bear { @apply shadow-glow-bear; }
+/* Keyboard users get a bone ring everywhere, mouse users never see it. */
+:focus-visible {
+  outline: 2px solid theme('colors.primary');
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
-/* Loading placeholder with a light sweep instead of a flat pulse. */
-.skeleton { @apply relative overflow-hidden bg-elevated/70 rounded-lg; }
+/* ── Data accents ────────────────────────────────────────────────── */
+
+/* Direction pill — the +1.24% / −0.38% chip. */
+.delta {
+  @apply num inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold;
+}
+.delta-up { color: theme('colors.bull'); background-color: rgba(48, 209, 88, .13); }
+.delta-down { color: theme('colors.bear'); background-color: rgba(255, 69, 58, .13); }
+
+/* ── Utility ─────────────────────────────────────────────────────── */
+
+/* Fades a horizontally-scrolling rail into its own edges. */
+.edge-fade {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+.no-bar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-bar::-webkit-scrollbar { display: none; }
+
+.skeleton {
+  @apply relative overflow-hidden rounded-card;
+  background-color: theme('colors.elevated');
+}
 .skeleton::after {
   content: '';
   @apply absolute inset-0 -translate-x-full animate-shimmer;
-  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, .05), transparent);
 }
 
+/*
+ * The Signal arc drawing itself in — all four segments at once, because the
+ * ring is one measurement rather than four.
+ *
+ * The keyframe declares only `from`, and the fill mode is deliberately left at
+ * `none`: the element's own stroke-dashoffset: 0 is where it rests, so an arc
+ * whose animation never runs is simply already drawn rather than invisible.
+ */
+@keyframes arc-sweep { from { stroke-dashoffset: 1; } }
+.arc-sweep { animation: arc-sweep .9s cubic-bezier(.32, .72, 0, 1); }
+
+/* Content rises in sequence rather than all at once — set --i on children. */
+.stagger > * { animation: rise .5s cubic-bezier(.32, .72, 0, 1) both; animation-delay: calc(var(--i, 0) * 55ms); }
+
+::selection { background: rgba(255, 255, 255, .18); }
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .1); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .2); background-clip: content-box; }
+
 @media (prefers-reduced-motion: reduce) {
-  .card-3d, .btn, .btn-ghost { transition: none; }
-  .card-3d:hover { transform: none; }
-  .skeleton::after { animation: none; }
-  .aurora-layer { animation: none !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .card-lift:hover { transform: none; }
+  .stagger > * { animation: none; }
 }

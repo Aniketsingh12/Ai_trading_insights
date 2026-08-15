@@ -45,7 +45,7 @@ export default function InfoTip({ term, text, className = '' }) {
         type="button"
         aria-label={term ? `What is ${term}?` : 'More info'}
         aria-expanded={open}
-        className="inline-flex items-center text-text-secondary hover:text-primary focus:text-primary focus:outline-none"
+        className="inline-flex items-center text-text-tertiary transition-colors hover:text-text-primary focus:text-text-primary"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -55,10 +55,11 @@ export default function InfoTip({ term, text, className = '' }) {
       {open && (
         <span
           role="tooltip"
-          className={`pointer-events-none absolute ${anchor} bottom-full mb-1.5 z-50
-                     w-max max-w-[min(15rem,calc(100vw-2.5rem))]
-                     bg-bg border border-border rounded-lg p-2 text-xs font-normal normal-case
-                     text-text-primary leading-snug shadow-xl text-left`}
+          className={`pointer-events-none absolute ${anchor} bottom-full z-50 mb-2
+                     w-max max-w-[min(16rem,calc(100vw-2.5rem))] rounded-ctl p-2.5
+                     text-left text-xs font-normal normal-case leading-relaxed tracking-normal
+                     text-text-primary shadow-pop`}
+          style={{ backgroundColor: 'rgba(36,36,43,.96)', backdropFilter: 'blur(24px) saturate(180%)' }}
         >
           {content}
         </span>
