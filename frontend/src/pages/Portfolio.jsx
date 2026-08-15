@@ -33,22 +33,22 @@ function TotalCard({ t }) {
         <span className="eyebrow">{t.positions} position{t.positions === 1 ? '' : 's'}</span>
       </div>
 
-      <div className="num mt-3 text-3xl font-semibold tracking-tight">
+      <div className="num mt-2 text-figure font-semibold tracking-tight">
         {t.currency_symbol}{fmt(t.market_value)}
       </div>
 
-      <div className="mt-1.5 text-sm">
+      <div className="mt-1 text-[13px]">
         {t.pnl != null ? (
           <Signed value={t.pnl} pct={t.pnl_pct} sym={t.currency_symbol} className="font-medium" />
         ) : (
-          <span className="text-xs leading-snug text-text-tertiary">
+          <span className="text-[11px] leading-snug text-text-tertiary">
             Total withheld — {t.positions - t.priced_positions} position(s) had no live price, so
             this would understate the real figure.
           </span>
         )}
       </div>
 
-      <div className="mt-4 flex items-baseline justify-between gap-3 border-t rule pt-3 text-xs">
+      <div className="mt-3 flex items-baseline justify-between gap-3 border-t rule pt-2 text-[11px]">
         <span className="text-text-tertiary">
           Cost <span className="num text-text-secondary">{t.currency_symbol}{fmt(t.cost_basis)}</span>
         </span>
@@ -58,9 +58,7 @@ function TotalCard({ t }) {
       </div>
 
       {/* Direction hairline, the same device the index cards use. */}
-      <span
-        className={`absolute inset-x-5 bottom-0 h-px ${t.pnl == null ? 'bg-transparent' : up ? 'bg-bull/40' : 'bg-bear/40'}`}
-      />
+      <span className={`absolute inset-x-4 bottom-0 h-px ${t.pnl == null ? 'bg-transparent' : up ? 'bg-bull/35' : 'bg-bear/35'}`} />
     </div>
   );
 }
@@ -108,7 +106,7 @@ export default function Portfolio() {
   }
 
   return (
-    <div className="stagger mx-auto max-w-[1400px] space-y-7 p-5 sm:p-8">
+    <div className="stagger mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6">
       <div style={{ '--i': 0 }}>
         <PageHeader
           eyebrow="Repriced every minute"
@@ -118,24 +116,24 @@ export default function Portfolio() {
       </div>
 
       {stats?.totals?.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ '--i': 1 }}>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" style={{ '--i': 1 }}>
           {stats.totals.map((t) => <TotalCard key={t.currency} t={t} />)}
         </div>
       )}
 
-      <form onSubmit={submit} className="card flex flex-wrap items-end gap-3" style={{ '--i': 2 }}>
-        <div className="min-w-0 flex-1 basis-32">
-          <label htmlFor="p-ticker" className="eyebrow mb-1.5 block">Symbol</label>
+      <form onSubmit={submit} className="card flex flex-wrap items-end gap-2.5" style={{ '--i': 2 }}>
+        <div className="min-w-0 flex-1 basis-28">
+          <label htmlFor="p-ticker" className="eyebrow mb-1 block">Symbol</label>
           <input id="p-ticker" className="input uppercase" value={form.ticker} placeholder="AAPL"
                  onChange={(e) => setForm({ ...form, ticker: e.target.value })} required />
         </div>
-        <div className="min-w-0 flex-1 basis-24">
-          <label htmlFor="p-qty" className="eyebrow mb-1.5 block">Quantity</label>
+        <div className="min-w-0 flex-1 basis-20">
+          <label htmlFor="p-qty" className="eyebrow mb-1 block">Quantity</label>
           <input id="p-qty" type="number" step="any" min="0" className="input" value={form.qty} placeholder="10"
                  onChange={(e) => setForm({ ...form, qty: e.target.value })} required />
         </div>
-        <div className="min-w-0 flex-1 basis-28">
-          <label htmlFor="p-avg" className="eyebrow mb-1.5 block">Average buy price</label>
+        <div className="min-w-0 flex-1 basis-24">
+          <label htmlFor="p-avg" className="eyebrow mb-1 block">Average buy price</label>
           <input id="p-avg" type="number" step="any" min="0" className="input" value={form.avg_price} placeholder="150"
                  onChange={(e) => setForm({ ...form, avg_price: e.target.value })} required />
         </div>
@@ -146,56 +144,56 @@ export default function Portfolio() {
 
       <div style={{ '--i': 3 }}>
         {isLoading ? (
-          <div className="skeleton h-64" />
+          <div className="skeleton h-52" />
         ) : !data?.length ? (
-          <div className="card px-6 py-14 text-center">
-            <Briefcase size={26} className="mx-auto text-text-tertiary" strokeWidth={1.5} />
-            <h2 className="mt-4 font-medium">No positions yet</h2>
-            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-text-secondary">
+          <div className="card px-6 py-12 text-center">
+            <Briefcase size={22} className="mx-auto text-text-tertiary" strokeWidth={1.5} />
+            <h2 className="mt-3 text-[13px] font-medium">No positions yet</h2>
+            <p className="mx-auto mt-1 max-w-sm text-[13px] leading-relaxed text-text-tertiary">
               Add a holding above to track its value and P&amp;L live. Any market works — try{' '}
-              <span className="mono text-text-primary">AAPL</span> or{' '}
-              <span className="mono text-text-primary">RELIANCE.NS</span>.
+              <span className="mono text-text-secondary">AAPL</span> or{' '}
+              <span className="mono text-text-secondary">RELIANCE.NS</span>.
             </p>
           </div>
         ) : (
           <div className="card overflow-x-auto p-0">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[600px] text-[13px]">
               <thead>
                 <tr className="border-b rule text-left">
-                  <th className="eyebrow px-5 py-3 font-medium">Symbol</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">Qty</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">Average</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">Price</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">Value</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">P&amp;L</th>
-                  <th className="w-12 px-5 py-3" />
+                  <th className="eyebrow px-4 py-2 font-medium">Symbol</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">Qty</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">Average</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">Price</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">Value</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">P&amp;L</th>
+                  <th className="w-10 px-4 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {data.map((p) => {
                   const sym = p.currency_symbol ?? '';
                   return (
-                    <tr key={p.ticker} className="border-b rule transition-colors last:border-0 hover:bg-white/[.04]">
-                      <td className="px-5 py-3.5">
+                    <tr key={p.ticker} className="border-b rule transition-colors last:border-0 hover:bg-white/[.03]">
+                      <td className="px-4 py-2.5">
                         <Link className="font-medium transition-colors hover:text-text-secondary" to={`/analyze/${p.ticker}`}>
                           {p.ticker}
                         </Link>
-                        {p.exchange && <div className="eyebrow mt-1">{p.exchange}</div>}
+                        {p.exchange && <div className="eyebrow mt-0.5">{p.exchange}</div>}
                       </td>
-                      <td className="mono px-5 py-3.5 text-right">{fmt(p.qty, 0)}</td>
-                      <td className="mono px-5 py-3.5 text-right text-text-secondary">{sym}{fmt(p.avg_price)}</td>
-                      <td className="mono px-5 py-3.5 text-right">
-                        {p.priced ? `${sym}${fmt(p.price)}` : <span className="text-xs text-text-tertiary">no data</span>}
+                      <td className="mono px-4 py-2.5 text-right">{fmt(p.qty, 0)}</td>
+                      <td className="mono px-4 py-2.5 text-right text-text-tertiary">{sym}{fmt(p.avg_price)}</td>
+                      <td className="mono px-4 py-2.5 text-right">
+                        {p.priced ? `${sym}${fmt(p.price)}` : <span className="text-[11px] text-text-tertiary">no data</span>}
                       </td>
-                      <td className="mono px-5 py-3.5 text-right">{p.priced ? `${sym}${fmt(p.market_value)}` : '—'}</td>
-                      <td className="px-5 py-3.5 text-right"><Signed value={p.pnl} pct={p.pnl_pct} sym={sym} /></td>
-                      <td className="px-5 py-3.5 text-right">
+                      <td className="mono px-4 py-2.5 text-right">{p.priced ? `${sym}${fmt(p.market_value)}` : '—'}</td>
+                      <td className="px-4 py-2.5 text-right"><Signed value={p.pnl} pct={p.pnl_pct} sym={sym} /></td>
+                      <td className="px-4 py-2.5 text-right">
                         <button
                           onClick={() => remove.mutate(p.ticker)}
                           aria-label={`Remove ${p.ticker}`}
-                          className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
+                          className="rounded p-1 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={13} />
                         </button>
                       </td>
                     </tr>

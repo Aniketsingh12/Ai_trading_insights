@@ -18,23 +18,23 @@ export default function TapeRail() {
   if (!items.length) return null;
 
   return (
-    <div className="material relative z-40 border-b rule">
+    <div className="relative z-30 border-b rule bg-bg">
       <div className="edge-fade no-bar overflow-x-auto">
-        <div className="flex w-max items-stretch px-6">
+        <div className="mx-auto flex w-max items-center px-4 sm:px-6">
           {items.map((i) => (
             <Link
               key={i.ticker}
               to={`/analyze/${encodeURIComponent(i.ticker)}`}
-              className="group flex items-center gap-2.5 whitespace-nowrap border-r rule py-2 pl-4 pr-4 first:pl-0 last:border-r-0
-                         transition-colors hover:bg-white/[.04]"
+              className="group flex items-center gap-2 whitespace-nowrap px-3 py-1.5 first:pl-0
+                         transition-colors hover:bg-white/[.03]"
             >
-              <span className="text-xs text-text-secondary transition-colors group-hover:text-text-primary">
+              <span className="text-[11px] text-text-tertiary transition-colors group-hover:text-text-secondary">
                 {i.label}
               </span>
-              <span className="num text-xs font-semibold text-text-primary">
+              <span className="num text-[11px] font-medium">
                 {i.currency_symbol ?? ''}{i.price.toLocaleString()}
               </span>
-              <Delta pct={i.change_pct} bare className="text-xs" />
+              <Delta pct={i.change_pct} bare className="text-[11px]" />
             </Link>
           ))}
         </div>

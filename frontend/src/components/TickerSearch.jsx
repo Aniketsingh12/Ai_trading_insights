@@ -60,23 +60,23 @@ export default function TickerSearch({
       />
       {open && suggestions.length > 0 && (
         <ul
-          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-card shadow-pop"
-          style={{ backgroundColor: 'rgba(26,26,31,.94)', backdropFilter: 'blur(28px) saturate(180%)' }}
+          className="absolute inset-x-0 top-full z-50 mt-1.5 overflow-hidden rounded-ctl shadow-pop"
+          style={{ backgroundColor: 'rgba(24,24,28,.97)', backdropFilter: 'blur(24px) saturate(180%)' }}
         >
           {suggestions.map((s) => (
             <li key={s.ticker}>
               <button
                 type="button"
-                className="flex w-full items-center gap-3 border-b rule px-3.5 py-3 text-left transition-colors last:border-0 hover:bg-white/[.07]"
+                className="flex w-full items-center gap-2.5 border-b rule px-3 py-2 text-left transition-colors last:border-0 hover:bg-white/[.06]"
                 onMouseDown={(e) => { e.preventDefault(); pick(s.ticker); }}
               >
-                <span className="w-24 shrink-0 truncate text-sm font-medium text-text-primary">
+                <span className="w-20 shrink-0 truncate text-[13px] font-medium text-text-primary">
                   {s.ticker}
                 </span>
-                <span className="flex-1 truncate text-sm text-text-secondary">{s.name}</span>
-                <span className="hidden shrink-0 text-xs text-text-tertiary sm:inline">{s.exchange}</span>
+                <span className="flex-1 truncate text-[13px] text-text-tertiary">{s.name}</span>
+                <span className="hidden shrink-0 text-[11px] text-text-tertiary sm:inline">{s.exchange}</span>
                 {s.type && (
-                  <span className="eyebrow shrink-0 rounded-md bg-white/[.07] px-1.5 py-1 text-text-secondary">
+                  <span className="eyebrow shrink-0 rounded bg-white/[.06] px-1 py-0.5 text-text-secondary">
                     {TYPE_LABEL[s.type] || s.type}
                   </span>
                 )}

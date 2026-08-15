@@ -50,16 +50,16 @@ export default function InfoTip({ term, text, className = '' }) {
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        <Info size={13} />
+        <Info size={11} />
       </button>
       {open && (
         <span
           role="tooltip"
-          className={`pointer-events-none absolute ${anchor} bottom-full z-50 mb-2
-                     w-max max-w-[min(16rem,calc(100vw-2.5rem))] rounded-ctl p-2.5
-                     text-left text-xs font-normal normal-case leading-relaxed tracking-normal
-                     text-text-primary shadow-pop`}
-          style={{ backgroundColor: 'rgba(36,36,43,.96)', backdropFilter: 'blur(24px) saturate(180%)' }}
+          className={`pointer-events-none absolute ${anchor} bottom-full z-50 mb-1.5
+                     w-max max-w-[min(15rem,calc(100vw-2.5rem))] rounded-ctl p-2
+                     text-left text-[11px] font-normal normal-case leading-relaxed tracking-normal
+                     text-text-secondary shadow-pop`}
+          style={{ backgroundColor: 'rgba(33,33,39,.97)', backdropFilter: 'blur(24px) saturate(180%)' }}
         >
           {content}
         </span>

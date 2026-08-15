@@ -132,15 +132,15 @@ export default function AiText({ text, className = '', dense = false }) {
   }
   flushAll();
 
-  const body = dense ? 'text-sm leading-[1.6]' : 'text-[15px] leading-[1.68]';
+  const body = dense ? 'text-[13px] leading-[1.6]' : 'text-[14px] leading-[1.65]';
 
   return (
-    <div className={`serif ${dense ? 'space-y-2' : 'space-y-3.5'} text-text-secondary ${className}`}>
+    <div className={`serif ${dense ? 'space-y-1.5' : 'space-y-2.5'} text-text-secondary ${className}`}>
       {blocks.map((b, i) => {
         if (b.type === 'h') {
           // Section labels stay in the interface sans — they're structure, not voice.
           return (
-            <h4 key={i} className="eyebrow pt-2 font-sans text-text-secondary">
+            <h4 key={i} className="eyebrow pt-1.5 font-sans text-text-secondary">
               {b.text}
             </h4>
           );
@@ -149,7 +149,7 @@ export default function AiText({ text, className = '', dense = false }) {
           return (
             <div key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-1">
               <span className="eyebrow font-sans">Verdict</span>
-              <span className={`text-xl ${VERDICT_TONE[b.verdict] || 'text-text-primary'}`}>
+              <span className={`text-base ${VERDICT_TONE[b.verdict] || 'text-text-primary'}`}>
                 {b.verdict}
               </span>
               {b.rest && b.rest.toUpperCase() !== b.verdict && (

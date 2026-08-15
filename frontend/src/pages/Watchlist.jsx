@@ -40,7 +40,7 @@ export default function Watchlist() {
   };
 
   return (
-    <div className="stagger mx-auto max-w-[1400px] space-y-7 p-5 sm:p-8">
+    <div className="stagger mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6">
       <div style={{ '--i': 0 }}>
         <PageHeader
           eyebrow={
@@ -53,13 +53,15 @@ export default function Watchlist() {
         >
           {quotes.length > 0 && (
             <button className="btn-ghost" onClick={() => navigate('/picks')}>
-              <Sparkles size={14} /> Rank these
+              <Sparkles size={12} /> Rank these
             </button>
           )}
         </PageHeader>
       </div>
 
-      <form onSubmit={submit} className="flex max-w-xl gap-2" style={{ '--i': 1 }}>
+      {/* z-20: the stagger transform makes each section a stacking context, so the
+          autocomplete needs its whole section lifted to overlay the table below. */}
+      <form onSubmit={submit} className="z-20 flex max-w-lg gap-2" style={{ '--i': 1 }}>
         <TickerSearch
           className="flex-1"
           value={ticker}
@@ -74,27 +76,27 @@ export default function Watchlist() {
 
       <div style={{ '--i': 2 }}>
         {isLoading ? (
-          <div className="skeleton h-64" />
+          <div className="skeleton h-52" />
         ) : !quotes.length ? (
-          <div className="card px-6 py-14 text-center">
-            <List size={26} className="mx-auto text-text-tertiary" strokeWidth={1.5} />
-            <h2 className="mt-4 font-medium">Nothing on the list yet</h2>
-            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-text-secondary">
-              Search above — try <span className="mono text-text-primary">AAPL</span>,{' '}
-              <span className="mono text-text-primary">RELIANCE.NS</span> or{' '}
-              <span className="mono text-text-primary">BTC-USD</span>. Saved symbols can be scored
+          <div className="card px-6 py-12 text-center">
+            <List size={22} className="mx-auto text-text-tertiary" strokeWidth={1.5} />
+            <h2 className="mt-3 text-[13px] font-medium">Nothing on the list yet</h2>
+            <p className="mx-auto mt-1 max-w-sm text-[13px] leading-relaxed text-text-tertiary">
+              Search above — try <span className="mono text-text-secondary">AAPL</span>,{' '}
+              <span className="mono text-text-secondary">RELIANCE.NS</span> or{' '}
+              <span className="mono text-text-secondary">BTC-USD</span>. Saved symbols can be scored
               together on <Link to="/picks" className="text-text-primary underline underline-offset-4">Top Picks</Link>.
             </p>
           </div>
         ) : (
           <div className="card overflow-x-auto p-0">
-            <table className="w-full min-w-[460px] text-sm">
+            <table className="w-full min-w-[420px] text-[13px]">
               <thead>
                 <tr className="border-b rule text-left">
-                  <th className="eyebrow px-5 py-3 font-medium">Symbol</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">Price</th>
-                  <th className="eyebrow px-5 py-3 text-right font-medium">Today</th>
-                  <th className="w-12 px-5 py-3" />
+                  <th className="eyebrow px-4 py-2 font-medium">Symbol</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">Price</th>
+                  <th className="eyebrow px-4 py-2 text-right font-medium">Today</th>
+                  <th className="w-10 px-4 py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -102,26 +104,26 @@ export default function Watchlist() {
                   // Use the quote's own symbol — hardcoding "$" showed ₹ stocks as dollars.
                   const sym = q.currency_symbol ?? '';
                   return (
-                    <tr key={q.ticker} className="border-b rule transition-colors last:border-0 hover:bg-white/[.04]">
-                      <td className="px-5 py-3.5">
+                    <tr key={q.ticker} className="border-b rule transition-colors last:border-0 hover:bg-white/[.03]">
+                      <td className="px-4 py-2.5">
                         <Link className="font-medium transition-colors hover:text-text-secondary" to={`/analyze/${q.ticker}`}>
                           {q.ticker}
                         </Link>
-                        {q.exchange && <div className="eyebrow mt-1">{q.exchange}</div>}
+                        {q.exchange && <div className="eyebrow mt-0.5">{q.exchange}</div>}
                       </td>
-                      <td className="mono px-5 py-3.5 text-right">
+                      <td className="mono px-4 py-2.5 text-right">
                         {q.price != null
                           ? `${sym}${q.price.toLocaleString()}`
-                          : <span className="text-xs text-text-tertiary">no data</span>}
+                          : <span className="text-[11px] text-text-tertiary">no data</span>}
                       </td>
-                      <td className="px-5 py-3.5 text-right"><Delta pct={q.change_pct} bare /></td>
-                      <td className="px-5 py-3.5 text-right">
+                      <td className="px-4 py-2.5 text-right"><Delta pct={q.change_pct} bare /></td>
+                      <td className="px-4 py-2.5 text-right">
                         <button
                           onClick={() => remove.mutate(q.ticker)}
                           aria-label={`Remove ${q.ticker}`}
-                          className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
+                          className="rounded p-1 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={13} />
                         </button>
                       </td>
                     </tr>
