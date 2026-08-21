@@ -1,8 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from mcp_servers import market_data_mcp
+from utils.guard import rate_limit_data
 
-router = APIRouter(prefix="/market", tags=["market"])
+# Free to serve, so no passcode — but still capped, because every call here
+# reaches a third-party data provider under our IP and quota.
+router = APIRouter(prefix="/market", tags=["market"], dependencies=[Depends(rate_limit_data)])
 
 
 @router.get("/search")

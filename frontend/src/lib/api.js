@@ -1,14 +1,41 @@
+import { AccessError, getKey, requestKey } from './auth';
+import { getPreset } from './modelPreset';
+
 // Dev/web: '/api' hits the Vite proxy (or same-origin). Production web + the
 // Capacitor APK have no proxy, so they call the deployed backend directly via
-// VITE_API_URL (e.g. https://marketmind-api.onrender.com). Set it at build time.
+// VITE_API_URL (e.g. https://marketmind.up.railway.app/api). Set it at build time.
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
+/** FastAPI puts the useful message in `detail` — surface that, not "429". */
+async function errorMessage(r) {
+  try {
+    const body = await r.json();
+    if (typeof body?.detail === 'string') return body.detail;
+  } catch {
+    /* not JSON — fall through to the status line */
+  }
+  return `${r.status} ${r.statusText}`;
+}
+
 async function req(path, opts = {}) {
+  const key = getKey();
+  const preset = getPreset();
   const r = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(key ? { 'X-API-Key': key } : {}),
+      ...(preset ? { 'X-Model-Preset': preset } : {}),
+      ...opts.headers,
+    },
   });
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+
+  if (r.status === 401) {
+    // Raise the passcode prompt, and let the caller show its own message.
+    requestKey();
+    throw new AccessError('This action needs the access passcode.');
+  }
+  if (!r.ok) throw new Error(await errorMessage(r));
   return r.json();
 }
 
@@ -16,6 +43,7 @@ const enc = encodeURIComponent;
 
 export const api = {
   health: () => req('/health'),
+  models: () => req('/models'),
   search: (q) => req(`/market/search?q=${enc(q)}`),
   indices: (region = 'global') => req(`/market/indices?region=${enc(region)}`),
   quote: (t) => req(`/market/quote/${enc(t)}`),

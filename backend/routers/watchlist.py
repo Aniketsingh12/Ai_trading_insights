@@ -1,10 +1,11 @@
 import asyncio
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from mcp_servers import market_data_mcp
+from utils.guard import rate_limit_data
 
-router = APIRouter(prefix="/watchlist", tags=["watchlist"])
+router = APIRouter(prefix="/watchlist", tags=["watchlist"], dependencies=[Depends(rate_limit_data)])
 
 # In-memory store. Swap for Supabase later.
 _watchlists: dict[str, set[str]] = {}

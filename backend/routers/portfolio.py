@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from mcp_servers import portfolio_mcp
+from utils.guard import rate_limit_data
 
-router = APIRouter(prefix="/portfolio", tags=["portfolio"])
+router = APIRouter(prefix="/portfolio", tags=["portfolio"], dependencies=[Depends(rate_limit_data)])
 
 
 def _user_id() -> str:

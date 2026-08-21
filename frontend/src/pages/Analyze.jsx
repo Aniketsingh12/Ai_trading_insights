@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createChart } from 'lightweight-charts';
 import toast from 'react-hot-toast';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Archive, Loader2, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { ScoreBadge, SignalArc, Breakdown, RiskReward } from '../components/Score';
 import InfoTip from '../components/InfoTip';
 import AiText from '../components/AiText';
 import TickerSearch from '../components/TickerSearch';
 import Delta from '../components/Delta';
+import { isAccessError } from '../lib/auth';
 import { useBeginner } from '../lib/beginner.jsx';
 
 const VERDICT_TONE = {
@@ -101,6 +102,11 @@ export default function Analyze() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [reportId, setReportId] = useState(null);
+  // Set when the day's AI budget is spent and the API handed back an earlier run.
+  const [sampleNote, setSampleNote] = useState(null);
+  const qc = useQueryClient();
+  // Every AI action changes the remaining-runs count in the header.
+  const refreshQuota = () => qc.invalidateQueries({ queryKey: ['health'] });
 
   const { data: ohlcv } = useQuery({
     queryKey: ['ohlcv', ticker],
@@ -145,19 +151,26 @@ export default function Analyze() {
     try {
       setResult(await api.quickAnalysis(ticker));
     } catch (e) {
-      toast.error(`Analysis failed: ${e.message}`);
+      // A missing passcode already raised the gate — don't stack a toast on it.
+      if (!isAccessError(e)) toast.error(e.message);
     } finally {
       setRunning(false);
+      refreshQuota();
     }
   }
 
   async function runDeep() {
     try {
-      const { report_id } = await api.deepResearch(ticker);
-      setReportId(report_id);
-      toast.success('Deep research started');
+      const res = await api.deepResearch(ticker);
+      setReportId(res.report_id);
+      // The API degrades rather than refusing when the budget is gone: it hands
+      // back a real run from earlier so the demo still shows what this produces.
+      setSampleNote(res.sample ? res.sample_reason : null);
+      toast.success(res.sample ? 'Showing a saved run' : 'Deep research started');
     } catch (e) {
-      toast.error(`Could not start: ${e.message}`);
+      if (!isAccessError(e)) toast.error(e.message);
+    } finally {
+      refreshQuota();
     }
   }
 
@@ -168,6 +181,7 @@ export default function Analyze() {
       setInput(input.trim().toUpperCase());
       setReportId(null);
       setResult(null);
+      setSampleNote(null);
     }
   }
 
@@ -176,6 +190,7 @@ export default function Analyze() {
     setTicker(symbol);
     setReportId(null);
     setResult(null);
+    setSampleNote(null);
   }, []);
 
   const sym = quote?.currency_symbol ?? '$';
@@ -320,7 +335,18 @@ export default function Analyze() {
                 ? <><Loader2 size={12} className="animate-spin" /> Working…</>
                 : 'Run deep research'}
             </button>
-            {report?.agents && <div className="border-t rule pt-3"><AgentProgress agents={report.agents} /></div>}
+            {sampleNote && (
+              <div className="panel flex items-start gap-2 p-2.5">
+                <Archive size={12} className="mt-0.5 shrink-0 text-warn" />
+                <p className="text-[11px] leading-relaxed text-text-tertiary">
+                  <span className="text-warn">Saved run.</span> {sampleNote} This is a real report
+                  produced earlier, so you can still see the output.
+                </p>
+              </div>
+            )}
+            {report?.agents && !sampleNote && (
+              <div className="border-t rule pt-3"><AgentProgress agents={report.agents} /></div>
+            )}
             {report?.status === 'error' && <p className="text-[13px] text-bear">Failed: {report.error}</p>}
           </section>
         </div>
@@ -335,6 +361,20 @@ export default function Analyze() {
               <VerdictBadge verdict={report.verdict} />
             </div>
             <div className="pt-3"><AiText text={report.report} /></div>
+
+            {/*
+              The model was asked for a literal "VERDICT:" line. When it didn't
+              give one, the parser defaults to HOLD — say so rather than let a
+              formatting failure read as a considered neutral call.
+            */}
+            {report.verdict_source && report.verdict_source !== 'explicit' && (
+              <p className="mt-3 text-[11px] leading-relaxed text-warn">
+                The model didn’t state a verdict in the expected format, so this one was
+                {report.verdict_source === 'scanned' ? ' inferred from the text' : ' defaulted to HOLD'}.
+                Read the reasoning above rather than the label.
+              </p>
+            )}
+
             <p className="mt-4 border-t rule pt-3 text-[11px] text-text-tertiary">
               Written by {report.agents?.length ?? 5} analysts from live market data.
               Informational analysis, not financial advice.

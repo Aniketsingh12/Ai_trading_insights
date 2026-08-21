@@ -10,6 +10,7 @@ import AiText from '../components/AiText';
 import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
 import Delta from '../components/Delta';
+import { isAccessError } from '../lib/auth';
 
 /**
  * One row of the ranking. Rank numbers are load-bearing here — the list is an
@@ -134,7 +135,8 @@ export default function TopPicks() {
   const rankM = useMutation({
     mutationFn: (tickers) => api.rankTickers(tickers),
     onSuccess: () => setSource('custom'),
-    onError: (e) => toast.error(`Ranking failed: ${e.message}`),
+    // A missing passcode already raised the gate — don't stack a toast on it.
+    onError: (e) => { if (!isAccessError(e)) toast.error(e.message); },
   });
 
   const parse = (s) => s.split(/[\s,]+/).map((t) => t.trim().toUpperCase()).filter(Boolean);

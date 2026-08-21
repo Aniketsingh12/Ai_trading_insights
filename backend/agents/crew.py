@@ -61,4 +61,8 @@ async def run_deep_research(ticker: str, progress_cb: ProgressCb = None) -> dict
         "sections": list(sections),
         "report": synthesis["report"],
         "verdict": synthesis["verdict"],
+        # Carried so a degraded report is visible rather than silently presented
+        # as a confident call — see report_agent.parse_verdict.
+        "verdict_source": synthesis["verdict_source"],
+        "missing_sections": synthesis["missing_sections"],
     }

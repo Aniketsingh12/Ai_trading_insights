@@ -23,8 +23,9 @@ services:
         value: openai/gpt-oss-20b
       - key: TOGETHER_MODEL_AGENT
         value: deepseek-ai/DeepSeek-V4-Flash-0731
+      # One call, but ~85% of a deep run's cost. See scripts/eval_report_model.py.
       - key: TOGETHER_MODEL_REPORT
-        value: deepseek-ai/DeepSeek-V4-Pro
+        value: openai/gpt-oss-120b
       # ── Alternative: Google Gemini (free) — set LLM_PROVIDER=gemini ──
       - key: GEMINI_API_KEY          # free key from aistudio.google.com/apikey
         sync: false
@@ -42,10 +43,15 @@ services:
       # ── CORS: baseline covers local/Capacitor use; APPEND your Vercel URL after step 4 ──
       - key: CORS_ORIGINS
         value: https://localhost,capacitor://localhost,http://localhost
-      # ── Abuse guards: this URL is public, so cap the LLM/screener routes ──
-      - key: RATE_LIMIT_PER_MIN
-        value: "20"
-      - key: API_ACCESS_KEY         # optional; if set, callers must send X-API-Key
+      # ── Public demo: visitors may run the AI features, metered, with a cap ──
+      # Deep research costs 5 units, so VISITOR_LLM_LIMIT must stay >= 5.
+      - key: VISITOR_LLM_LIMIT      # AI runs one visitor gets per UTC day
+        value: "10"
+      - key: DAILY_LLM_LIMIT        # ceiling across ALL visitors — bounds the bill
+        value: "60"
+      - key: RATE_LIMIT_PER_MIN     # per-IP burst cap (data routes get 8x)
+        value: "30"
+      - key: API_ACCESS_KEY         # your passcode; bypasses both limits
         sync: false
       # ── Optional data-provider keys (app works without them) ──
       - key: NEWSAPI_KEY

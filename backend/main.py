@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import settings
-from routers import analyze, health, market, portfolio, screener, watchlist
+from routers import analyze, health, market, models, portfolio, screener, watchlist
 
 app = FastAPI(title="MarketMind API", version="0.2.0")
 
@@ -25,6 +25,7 @@ app.add_middleware(
 # same name would be unreachable.
 api = APIRouter(prefix="/api")
 api.include_router(health.router)
+api.include_router(models.router)
 api.include_router(market.router)
 api.include_router(analyze.router)
 api.include_router(screener.router)

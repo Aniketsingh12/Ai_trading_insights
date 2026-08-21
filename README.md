@@ -85,10 +85,27 @@ synthesis that decides the verdict.
 |------|---------|--------------------|--------|-----------|--------|
 | `quick` | single-asset summaries, score explanations | `openai/gpt-oss-20b` | `gemini-2.0-flash` | Haiku | `llama3.1:8b` |
 | `agent` | the 4 analyst agents, Top Picks ranking | `deepseek-ai/DeepSeek-V4-Flash-0731` | `gemini-2.0-flash` | Sonnet | `qwen2.5:7b` |
-| `report` | final synthesis + verdict | `deepseek-ai/DeepSeek-V4-Pro` | `gemini-2.5-flash` | Opus | `qwen2.5:7b` |
+| `report` | final synthesis + verdict | `openai/gpt-oss-120b` | `gemini-2.5-flash` | Opus | `qwen2.5:7b` |
 
-On Together that works out to roughly **$0.02 per deep-research run** (5 LLM calls).
+On Together that works out to roughly **$0.01–0.02 per deep-research run** (5 LLM calls).
 Override any tier with `TOGETHER_MODEL_QUICK` / `_AGENT` / `_REPORT`.
+
+The tiers are not equally expensive: the single `report` call reads all four analyst
+outputs, so it alone is **~85% of a run's cost**. It used to run on
+`deepseek-ai/DeepSeek-V4-Pro` ($1.74/$3.48); moving it to `openai/gpt-oss-120b`
+($0.15/$0.60) makes that call **~8× cheaper** while staying in the same model family as
+the `quick` tier, whose sectioned output already works here.
+
+It is also the only call whose output is machine-parsed (six headings + a `VERDICT:`
+line), so before going cheaper still, verify rather than assume:
+
+```bash
+cd backend && .venv/Scripts/python.exe scripts/eval_report_model.py
+```
+
+It runs the real synthesis prompt against each candidate (including Together's free
+endpoint) on identical input, and reports whether the verdict parsed, whether all six
+sections survived, and the cost per call.
 
 See `backend/utils/llm.py` for the abstraction layer.
 
@@ -195,13 +212,24 @@ The frontend is one responsive codebase for web, installable PWA, and Android AP
 
 ## Production hardening
 
-Two guards exist for a public deployment, both **off by default** so local dev has zero
-friction (`backend/utils/guard.py`):
+Deployed publicly as a demo, so visitors **can** run the AI features — there is no login,
+because nobody signs up to look at a portfolio project. Instead each visitor gets a
+metered free trial with a hard ceiling on total cost (`backend/utils/guard.py`, all off
+by default so local dev has zero friction):
 
 ```
-RATE_LIMIT_PER_MIN=20     # per-IP cap on the LLM/screener routes
-API_ACCESS_KEY=<random>   # requires header  X-API-Key: <value>  if set
+VISITOR_LLM_LIMIT=10      # AI runs one visitor gets per day
+DAILY_LLM_LIMIT=60        # ceiling across ALL visitors — bounds the bill
+API_ACCESS_KEY=<random>   # your passcode; bypasses both limits
+RATE_LIMIT_PER_MIN=30     # per-IP burst cap (data routes get 8x)
 ```
+
+Only AI calls are metered — prices, charts, the 0–100 scoring maths, watchlist and
+portfolio stay unlimited, so the app never looks broken. Deep research draws 5 units (it
+makes five model calls); everything else draws 1. When the day's budget is spent, deep
+research returns a real earlier report flagged as a saved sample rather than an error, so
+the showpiece still demonstrates itself. See
+**[DEPLOY.md](DEPLOY.md#running-it-as-a-public-demo)** for the cost table.
 
 Every external data/LLM call is wrapped so one failing ticker or rate-limited request
 degrades gracefully (a null tile, a fallback reason) instead of 500-ing the whole page —

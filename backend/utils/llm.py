@@ -14,14 +14,39 @@ report — so cost can scale with how much reasoning a call actually needs.
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 from typing import Literal
 
 import httpx
 from anthropic import Anthropic
 
 from config import settings
+from utils import model_presets
 
 Tier = Literal["quick", "agent", "report"]
+
+# The preset chosen for the current request, if any.
+#
+# A ContextVar rather than a parameter because the alternative is threading a
+# `preset` argument through every service, every agent and the crew, purely so
+# it can reach one lookup at the bottom. Async context propagates into the tasks
+# each request spawns, so a value set per request follows the whole call tree.
+# The deep-research background job sets it explicitly from the job record, since
+# that runs after its request's context is gone.
+_preset: ContextVar[str | None] = ContextVar("llm_preset", default=None)
+
+
+def set_preset(name: str | None):
+    """Returns a token for reset_preset. Use the dependency where possible."""
+    return _preset.set(name)
+
+
+def reset_preset(token) -> None:
+    _preset.reset(token)
+
+
+def current_preset() -> str | None:
+    return _preset.get()
 
 
 class LLMClient:
@@ -60,11 +85,9 @@ class LLMClient:
                 "report": settings.gemini_model_report,
             }[tier]
         if self.provider == "together":
-            return {
-                "quick": settings.together_model_quick,
-                "agent": settings.together_model_agent,
-                "report": settings.together_model_report,
-            }[tier]
+            # A preset covers all three tiers at once; with none set it resolves
+            # to the deployment's configured models, so behaviour is unchanged.
+            return model_presets.get(current_preset()).model_for(tier)
         return {
             "quick": settings.ollama_model_quick,
             "agent": settings.ollama_model_agent,
