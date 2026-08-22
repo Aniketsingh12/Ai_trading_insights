@@ -52,13 +52,15 @@ function BeginnerToggle({ beginner, setBeginner }) {
     >
       <span className="eyebrow hidden sm:block">Beginner</span>
       <span
-        className={`relative block h-[18px] w-8 shrink-0 rounded-pill transition-colors duration-300 ease-spring ${
-          beginner ? 'bg-primary' : 'bg-white/[.13]'
+        /* Not brand red: that colour is reserved for actions, and a filled red
+           block here reads as a warning rather than a setting that's on. */
+        className={`relative block h-[18px] w-8 shrink-0 border transition-colors duration-300 ease-spring ${
+          beginner ? 'border-white/60 bg-white/85' : 'border-white/20 bg-transparent'
         }`}
       >
         <span
-          className={`absolute top-[2px] h-[14px] w-[14px] rounded-full transition-transform duration-300 ease-spring ${
-            beginner ? 'translate-x-[16px] bg-bg' : 'translate-x-[2px] bg-white'
+          className={`absolute top-[2px] h-[12px] w-[12px] transition-transform duration-300 ease-spring ${
+            beginner ? 'translate-x-[17px] bg-bg' : 'translate-x-[2px] bg-white/50'
           }`}
         />
       </span>

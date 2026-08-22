@@ -153,12 +153,39 @@ def test_no_preset_resolves_to_the_configured_models():
 def test_a_preset_identical_to_the_default_is_hidden(monkeypatch):
     """
     `standard` follows the deployment's own TOGETHER_MODEL_* settings, so a
-    deployment already using the flagship makes `premium` the same thing.
-    Offering it as a locked upgrade would be a lie.
+    deployment configured to use the premium model everywhere makes `premium`
+    the same thing. Offering it as a locked upgrade would be a lie.
+
+    Premium runs one model across all three tiers, so redundancy needs all
+    three to match — matching only the report tier still leaves premium the
+    pricier option, and it should stay on offer.
     """
-    monkeypatch.setattr(
-        settings, "together_model_report", model_presets.PRESETS["premium"].model_for("report")
-    )
+    premium = settings.together_model_premium
+    for tier in ("quick", "agent", "report"):
+        monkeypatch.setattr(settings, f"together_model_{tier}", premium)
+
     ids = [o["id"] for o in model_presets.listing(is_owner=True)]
     assert "premium" not in ids
     assert "standard" in ids and "free" in ids
+
+
+def test_premium_stays_on_offer_when_only_the_report_tier_matches(monkeypatch):
+    """The pricier option is still pricier if it upgrades the other two tiers."""
+    monkeypatch.setattr(settings, "together_model_report", settings.together_model_premium)
+    assert "premium" in [o["id"] for o in model_presets.listing(is_owner=True)]
+
+
+def test_a_blank_setting_removes_that_option(monkeypatch):
+    """Emptying the env var is how you take an option off the picker."""
+    monkeypatch.setattr(settings, "together_model_free", "")
+    assert "free" not in [o["id"] for o in model_presets.listing(is_owner=True)]
+
+
+def test_any_model_id_is_accepted(monkeypatch):
+    """
+    Nothing is validated against a fixed catalogue — the point is being able to
+    try a new model by editing .env alone.
+    """
+    monkeypatch.setattr(settings, "together_model_free", "some-vendor/brand-new-model")
+    free = next(o for o in model_presets.listing(is_owner=True) if o["id"] == "free")
+    assert set(free["models"].values()) == {"some-vendor/brand-new-model"}

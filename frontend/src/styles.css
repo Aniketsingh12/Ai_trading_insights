@@ -33,7 +33,7 @@ body {
  */
 .stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000; }
 .stage-bg, .stage-bg2 { position: absolute; inset: 0; overflow: hidden; }
-.stage-bg { filter: url(#grade); opacity: .5; }
+.stage-bg { filter: url(#grade); opacity: .95; }
 .stage-bg video, .stage-bg2 video {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center top; display: block;
@@ -45,17 +45,22 @@ body {
   -webkit-mask-image: linear-gradient(180deg, transparent 21.5%, #000 100%);
   mask-image: linear-gradient(180deg, transparent 21.5%, #000 100%);
 }
-/* Content has to win. Anything less and the tables become unreadable. */
+/*
+ * Directional, not a blanket. The left third — where the headings and labels
+ * live — stays dark enough to read against; the right stays open so the plate
+ * is actually visible. Cards carry their own blur, so the scrim no longer has
+ * to do the legibility work on its own.
+ */
 .stage-scrim {
   position: absolute; inset: 0;
   background:
-    linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.82) 38%, #000 72%),
-    linear-gradient(100deg, #000 18%, rgba(0,0,0,.72) 46%, rgba(0,0,0,.30) 74%, rgba(0,0,0,.55) 100%);
+    linear-gradient(100deg, rgba(0,0,0,.94) 12%, rgba(0,0,0,.72) 42%, rgba(0,0,0,.34) 72%, rgba(0,0,0,.20) 100%),
+    linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.18) 34%, rgba(0,0,0,.42) 100%);
 }
 @media (max-width: 599px) {
   .stage-bg video, .stage-bg2 video { object-position: 78% top; }
   .stage-scrim {
-    background: linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.70) 24%, rgba(0,0,0,.92) 42%, #000 66%);
+    background: linear-gradient(180deg, rgba(0,0,0,.30) 0%, rgba(0,0,0,.62) 26%, rgba(0,0,0,.84) 48%, rgba(0,0,0,.90) 100%);
   }
 }
 
@@ -96,12 +101,23 @@ body {
 
 /* ── Surfaces ────────────────────────────────────────────────────── */
 
-/* Translucent so the plate reads faintly through, but opaque enough that a
-   dense table never has to compete with moving video behind it. */
+/*
+ * Frosted rather than filled. The blur is what makes this work: it lets the
+ * plate's colour and movement read through the panel while turning it into a
+ * soft wash that a column of numbers can still sit on top of. A flat dark fill
+ * would be legible too, but it kills the whole atmosphere behind it.
+ */
 .card {
   @apply relative p-4;
-  background-color: rgba(10, 10, 12, .82);
-  border: 1px solid rgba(255, 255, 255, .09);
+  background-color: rgba(14, 14, 18, .52);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+/* No backdrop-filter (older Firefox, some Android): fall back to opaque, since
+   unreadable is worse than undecorated. */
+@supports not (backdrop-filter: blur(1px)) {
+  .card { background-color: rgba(12, 12, 15, .93); }
 }
 
 /* A card you can act on: it steps one rung up the lightness ladder. */
@@ -112,7 +128,7 @@ body {
 }
 @media (hover: hover) {
   .card-lift:hover {
-    background-color: rgba(24, 24, 28, .9);
+    background-color: rgba(28, 28, 34, .62);
     border-color: theme('colors.primary');
     transform: translateY(-1px);
   }
@@ -128,12 +144,12 @@ body {
 
 /* The nav bar — content scrolls beneath it. */
 .material {
-  background-color: rgba(0, 0, 0, .86);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  background-color: rgba(0, 0, 0, .62);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 @supports not (backdrop-filter: blur(1px)) {
-  .material { background-color: rgba(0, 0, 0, .97); }
+  .material { background-color: rgba(0, 0, 0, .95); }
 }
 
 .rule { border-color: rgba(255, 255, 255, .06); }
@@ -222,10 +238,17 @@ body {
  * sibling on z-index alone. `position: relative` here lets a child opt into a
  * higher layer with `z-*`; anything holding a dropdown must do so.
  */
+/*
+ * Sections settle into place on arrival.
+ *
+ * Position only — never opacity, and no staggered delay holding a `from` state.
+ * Both of those make the animation responsible for revealing content, so a
+ * stalled clock leaves the page half-drawn with sections simply absent. This
+ * way the worst case is a skipped movement.
+ */
 .stagger > * {
   position: relative;
-  animation: rise .4s cubic-bezier(.32, .72, 0, 1) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  animation: rise .45s cubic-bezier(.32, .72, 0, 1);
 }
 
 /* The Signal arc drawing itself in. The keyframe declares only `from`, and the

@@ -104,6 +104,13 @@ class LLMClient:
         temperature: float = 0.4,
     ) -> str:
         model = self._model_for(tier)
+        # Reasoning models (gpt-oss, DeepSeek R-series, o-series) spend the
+        # budget on internal reasoning *before* emitting any content. A caller
+        # asking for 500 tokens gets 500 tokens of reasoning, finish_reason
+        # "length", and an empty completion — which reads as a broken feature
+        # rather than a budget that was too small. Floor it so the visible
+        # answer always has room after the thinking.
+        max_tokens = max(max_tokens, settings.llm_min_output_tokens)
         if self.provider == "anthropic":
             return await self._anthropic_complete(prompt, system, model, max_tokens, temperature)
         if self.provider == "openai_compat":
@@ -166,9 +173,17 @@ class LLMClient:
         content = message.get("content") or message.get("reasoning_content") or ""
         content = content.strip()
         if not content:
+            finish = choices[0].get("finish_reason")
+            if finish == "length":
+                # Name the actual cause. This is a token-budget problem, not a
+                # dead model, and the two need very different responses.
+                raise RuntimeError(
+                    f"{model} used its whole {max_tokens}-token budget on reasoning and "
+                    f"produced no answer. Raise LLM_MIN_OUTPUT_TOKENS, or pick a model "
+                    f"that doesn't reason before answering."
+                )
             raise RuntimeError(
-                f"LLM returned an empty completion (model={model}, "
-                f"finish_reason={choices[0].get('finish_reason')})"
+                f"LLM returned an empty completion (model={model}, finish_reason={finish})"
             )
         return content
 

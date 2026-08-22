@@ -48,7 +48,8 @@ function AgentProgress({ agents }) {
           <li key={a.name} className="flex items-center gap-2 text-[13px]">
             <span
               className={`h-1 w-1 shrink-0 rounded-full ${
-                done ? 'bg-bull' : err ? 'bg-bear' : running ? 'animate-pulse bg-primary' : 'bg-white/20'
+                // White for in-progress: red here reads as a failed analyst.
+                done ? 'bg-bull' : err ? 'bg-bear' : running ? 'animate-pulse bg-white' : 'bg-white/20'
               }`}
             />
             <span className={done || running ? 'text-text-secondary' : 'text-text-tertiary'}>{a.name}</span>

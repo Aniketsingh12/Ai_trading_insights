@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     together_model_agent: str = "deepseek-ai/DeepSeek-V4-Flash-0731"       # $0.14/$0.28
     together_model_report: str = "openai/gpt-oss-120b"                     # $0.15/$0.60
 
+    # The other two picker options. Put ANY model id here — nothing validates
+    # against a fixed list, so these are the knobs for trying something new
+    # without touching code. Leave blank to drop that option from the picker.
+    together_model_free: str = "Prism-ML/Ternary-Bonsai-27B"    # $0 / $0
+    together_model_premium: str = "deepseek-ai/DeepSeek-V4-Pro"  # $1.74 / $3.48
+
+    # Floor on every completion's token budget. Reasoning models burn the budget
+    # thinking before they write anything, so a small ask returns nothing at all.
+    llm_min_output_tokens: int = 1600
+
     polygon_api_key: str = ""
     fmp_api_key: str = ""
     newsapi_key: str = ""

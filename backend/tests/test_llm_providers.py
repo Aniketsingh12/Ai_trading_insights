@@ -107,7 +107,12 @@ def test_reasoning_content_is_used_when_content_is_null(monkeypatch):
 @pytest.mark.parametrize("body,expected", [
     ({"error": {"message": "model not found: bad/model"}}, "model not found"),
     ({"choices": []}, "no choices"),
-    ({"choices": [{"message": {"content": None}, "finish_reason": "length"}]}, "empty completion"),
+    # A reasoning model that spent its whole budget thinking is a *budget*
+    # problem, not a dead model, so it must say so rather than report a generic
+    # empty completion — the two need completely different responses.
+    ({"choices": [{"message": {"content": None}, "finish_reason": "length"}]}, "budget on reasoning"),
+    # Empty for any other reason keeps the generic message.
+    ({"choices": [{"message": {"content": ""}, "finish_reason": "stop"}]}, "empty completion"),
 ])
 def test_bad_responses_raise_readable_errors(monkeypatch, body, expected):
     _fake_transport(monkeypatch, body)

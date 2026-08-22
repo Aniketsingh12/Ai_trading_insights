@@ -176,7 +176,9 @@ export default function AiQuota() {
                   </div>
                   <div className="mt-1.5 h-1 overflow-hidden bg-white/[.07]">
                     <div
-                      className={`h-full transition-[width] duration-500 ease-spring ${spent ? 'bg-warn' : 'bg-primary'}`}
+                      /* White while there's allowance left, red only once it's gone —
+               a red bar filling up as you use the demo reads as an alarm. */
+            className={`h-full transition-[width] duration-500 ease-spring ${spent ? 'bg-primary' : 'bg-white/70'}`}
                       style={{ width: `${Math.min(100, (visitor.used / visitor.limit) * 100)}%` }}
                     />
                   </div>

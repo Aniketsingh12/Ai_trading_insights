@@ -23,8 +23,8 @@ from dataclasses import dataclass
 
 from config import settings
 
-_FREE_MODEL = "Prism-ML/Ternary-Bonsai-27B"        # $0 / $0, reduced rate limits
-_FLAGSHIP_REPORT = "deepseek-ai/DeepSeek-V4-Pro"   # $1.74 / $3.48
+"""Model ids come from settings, never from a hardcoded list here, so any
+   Together model can be tried by editing .env alone."""
 
 
 @dataclass(frozen=True)
@@ -37,18 +37,28 @@ class Preset:
     cost_units: int
     owner_only: bool
     price_hint: str
-    # None means "whatever the deployment configured", so TOGETHER_MODEL_* env
-    # overrides keep working instead of being silently shadowed by this table.
-    _models: dict[str, str] | None = None
+    # Name of the setting holding this preset's model, or None for "use the
+    # deployment's own per-tier config". Read at call time, not import time, so
+    # editing .env is enough to try a different model.
+    _setting: str | None = None
 
     def model_for(self, tier: str) -> str:
-        if self._models is None:
+        if self._setting is None:
             return {
                 "quick": settings.together_model_quick,
                 "agent": settings.together_model_agent,
                 "report": settings.together_model_report,
             }[tier]
-        return self._models[tier]
+        override = getattr(settings, self._setting, "").strip()
+        if not override:                       # blank = fall back to configured
+            return Preset(self.id, "", "", 0, False, "").model_for(tier)
+        # A single-model preset runs every tier on that one model.
+        return override
+
+    @property
+    def configured(self) -> bool:
+        """False when its setting is blank — the option is then not offered."""
+        return self._setting is None or bool(getattr(settings, self._setting, "").strip())
 
 
 PRESETS: dict[str, Preset] = {
@@ -59,7 +69,7 @@ PRESETS: dict[str, Preset] = {
         cost_units=0,
         owner_only=False,
         price_hint="$0",
-        _models={"quick": _FREE_MODEL, "agent": _FREE_MODEL, "report": _FREE_MODEL},
+        _setting="together_model_free",
     ),
     "standard": Preset(
         id="standard",
@@ -72,15 +82,11 @@ PRESETS: dict[str, Preset] = {
     "premium": Preset(
         id="premium",
         label="Premium",
-        blurb="Flagship model writes the final synthesis. Reserved for the owner on this demo.",
+        blurb="One flagship model across every step. Reserved for the owner on this demo.",
         cost_units=3,
         owner_only=True,
         price_hint="~$0.011 / deep run",
-        _models={
-            "quick": settings.together_model_quick,
-            "agent": settings.together_model_agent,
-            "report": _FLAGSHIP_REPORT,
-        },
+        _setting="together_model_premium",
     ),
 }
 
@@ -133,5 +139,5 @@ def listing(is_owner: bool) -> list[dict]:
             "models": _resolved(p),
         }
         for p in PRESETS.values()
-        if not is_redundant(p)
+        if p.configured and not is_redundant(p)
     ]

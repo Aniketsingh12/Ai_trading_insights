@@ -61,14 +61,17 @@ export default {
         spring: 'cubic-bezier(.32,.72,0,1)',
       },
       keyframes: {
-        rise: {
-          from: { opacity: '0', transform: 'translateY(6px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
+        // Transform only, no opacity.
+        //
+        // Fading in from 0 means the animation itself is what makes content
+        // visible — so any stall (throttled tab, slow first paint, a device
+        // dropping frames) leaves sections blank. Animating position alone can
+        // only ever make content arrive slightly displaced, never missing.
+        rise: { from: { transform: 'translateY(7px)' } },
         shimmer: { '100%': { transform: 'translateX(100%)' } },
       },
       animation: {
-        rise: 'rise .4s cubic-bezier(.32,.72,0,1) both',
+        rise: 'rise .45s cubic-bezier(.32,.72,0,1)',
         shimmer: 'shimmer 1.6s infinite',
       },
     },
