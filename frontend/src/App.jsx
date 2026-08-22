@@ -41,26 +41,37 @@ function Mark({ size = 18 }) {
   );
 }
 
-/** Compact switch. On is bone, because bone is the only emphasis in the system. */
+/**
+ * Beginner mode switch.
+ *
+ * The track never fills. A filled track reads as a block of colour sitting in
+ * the header — loud as red, still loud as white — and this is a preference, not
+ * an action. State is carried by a small knob and by the label brightening,
+ * which is as much emphasis as a setting warrants next to a red CTA.
+ */
 function BeginnerToggle({ beginner, setBeginner }) {
   return (
     <button
       onClick={() => setBeginner(!beginner)}
       aria-pressed={beginner}
       title="Beginner mode — plain-English calls, no raw indicators"
-      className="flex shrink-0 items-center gap-2"
+      className="group flex shrink-0 items-center gap-2"
     >
-      <span className="eyebrow hidden sm:block">Beginner</span>
       <span
-        /* Not brand red: that colour is reserved for actions, and a filled red
-           block here reads as a warning rather than a setting that's on. */
-        className={`relative block h-[18px] w-8 shrink-0 border transition-colors duration-300 ease-spring ${
-          beginner ? 'border-white/60 bg-white/85' : 'border-white/20 bg-transparent'
+        className={`eyebrow hidden transition-colors sm:block ${
+          beginner ? 'text-text-primary' : 'text-text-tertiary group-hover:text-text-secondary'
+        }`}
+      >
+        Beginner
+      </span>
+      <span
+        className={`relative block h-[16px] w-[30px] shrink-0 border bg-transparent transition-colors duration-300 ease-spring ${
+          beginner ? 'border-white/45' : 'border-white/20'
         }`}
       >
         <span
-          className={`absolute top-[2px] h-[12px] w-[12px] transition-transform duration-300 ease-spring ${
-            beginner ? 'translate-x-[17px] bg-bg' : 'translate-x-[2px] bg-white/50'
+          className={`absolute top-[2px] h-[10px] w-[10px] transition-[transform,background-color] duration-300 ease-spring ${
+            beginner ? 'translate-x-[16px] bg-white' : 'translate-x-[2px] bg-white/35'
           }`}
         />
       </span>
