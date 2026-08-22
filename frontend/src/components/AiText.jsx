@@ -20,10 +20,10 @@ const VERDICT_TONE = {
 };
 
 /*
- * Everything a model wrote is set in the serif, and nothing else in the app is.
- * That split is the whole convention: serif means a mind reasoned its way here,
- * the tabular sans means the market reported it. You can tell prose from fact
- * without reading either.
+ * Model prose gets its own weight of the mono face, and nothing else in the app
+ * does. That split is the convention: this voice means a model reasoned its way
+ * here, the interface sans means the app is talking, and the heavier tabular
+ * cut means the market reported it.
  */
 
 // Inline: **bold**, *italic*, `code`
@@ -41,7 +41,7 @@ function inline(text, keyPrefix = 'i') {
       nodes.push(<strong key={key} className="font-semibold text-text-primary">{tok.slice(2, -2)}</strong>);
     } else if (tok.startsWith('`')) {
       nodes.push(
-        <code key={key} className="mono rounded bg-white/[.08] px-1.5 py-0.5 text-[.85em] text-text-primary">
+        <code key={key} className="mono bg-white/[.08] px-1.5 py-0.5 text-[.85em] text-text-primary">
           {tok.slice(1, -1)}
         </code>
       );

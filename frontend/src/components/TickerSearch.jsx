@@ -76,7 +76,7 @@ export default function TickerSearch({
                 <span className="flex-1 truncate text-[13px] text-text-tertiary">{s.name}</span>
                 <span className="hidden shrink-0 text-[11px] text-text-tertiary sm:inline">{s.exchange}</span>
                 {s.type && (
-                  <span className="eyebrow shrink-0 rounded bg-white/[.06] px-1 py-0.5 text-text-secondary">
+                  <span className="eyebrow shrink-0 bg-white/[.06] px-1 py-0.5 text-text-secondary">
                     {TYPE_LABEL[s.type] || s.type}
                   </span>
                 )}

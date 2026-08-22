@@ -16,7 +16,7 @@ export default function Segmented({ options, value, onChange, className = '' }) 
       {/* The capsule lives in its own padded box so the percentage maths is exact. */}
       <div className="pointer-events-none absolute inset-0.5">
         <div
-          className="h-full rounded-[0.375rem] bg-white/[.09] transition-transform duration-300 ease-spring"
+          className="h-full bg-white/[.09] transition-transform duration-300 ease-spring"
           style={{ width: `${100 / options.length}%`, transform: `translateX(${idx * 100}%)` }}
         />
       </div>
@@ -29,7 +29,7 @@ export default function Segmented({ options, value, onChange, className = '' }) 
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.id)}
-            className={`relative z-10 flex-1 whitespace-nowrap rounded-[0.375rem] px-3 py-1 text-[12px]
+            className={`relative z-10 flex-1 whitespace-nowrap px-3 py-1 text-[12px]
                         transition-colors duration-200 ${
                           active ? 'font-medium text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
                         }`}

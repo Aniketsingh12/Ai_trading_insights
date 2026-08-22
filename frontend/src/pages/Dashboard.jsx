@@ -77,7 +77,7 @@ function Breadth({ items }) {
                 onBlur={() => setHover(null)}
               >
                 <span
-                  className={`absolute inset-x-0 rounded-[2px] transition-[height,opacity] duration-500 ease-spring ${
+                  className={`absolute inset-x-0 transition-[height,opacity] duration-500 ease-spring ${
                     up ? 'bg-bull' : 'bg-bear'
                   } ${hover == null || hover === n ? 'opacity-100' : 'opacity-25'}`}
                   style={up ? { bottom: '50%', height: `${h}%` } : { top: '50%', height: `${h}%` }}

@@ -25,7 +25,7 @@ function SentimentBadge({ analysis }) {
   if (txt.includes('BULLISH')) { label = 'BULLISH'; tone = 'text-bull'; bg = 'rgba(48,209,88,.1)'; }
   else if (txt.includes('BEARISH')) { label = 'BEARISH'; tone = 'text-bear'; bg = 'rgba(255,69,58,.1)'; }
   return (
-    <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${tone}`} style={{ backgroundColor: bg }}>
+    <span className={`px-1.5 py-0.5 text-[11px] font-semibold ${tone}`} style={{ backgroundColor: bg }}>
       {label}
     </span>
   );
@@ -66,7 +66,7 @@ function Chart({ data }) {
   useEffect(() => {
     if (!ref.current || !data?.length) return;
     const chart = createChart(ref.current, {
-      layout: { background: { color: 'transparent' }, textColor: '#7e7e86', fontFamily: 'Instrument Sans, sans-serif', fontSize: 11 },
+      layout: { background: { color: 'transparent' }, textColor: '#7e7e86', fontFamily: 'JB, JetBrains Mono, monospace', fontSize: 11 },
       grid: { vertLines: { visible: false }, horzLines: { color: 'rgba(255,255,255,.04)' } },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
@@ -207,7 +207,7 @@ export default function Analyze() {
           <div className="flex items-center gap-2">
             <h1 className="text-[15px] font-semibold tracking-tight">{ticker}</h1>
             {quote?.exchange && (
-              <span className="eyebrow rounded bg-white/[.05] px-1.5 py-0.5 text-text-secondary">
+              <span className="eyebrow bg-white/[.05] px-1.5 py-0.5 text-text-secondary">
                 {quote.exchange} · {quote.region}
               </span>
             )}

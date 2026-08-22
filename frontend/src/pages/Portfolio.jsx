@@ -191,7 +191,7 @@ export default function Portfolio() {
                         <button
                           onClick={() => remove.mutate(p.ticker)}
                           aria-label={`Remove ${p.ticker}`}
-                          className="rounded p-1 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
+                          className="p-1 text-text-tertiary transition-colors hover:bg-bear/15 hover:text-bear"
                         >
                           <Trash2 size={13} />
                         </button>

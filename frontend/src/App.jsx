@@ -4,6 +4,7 @@ import { LineChart, Search, List, Briefcase, Sparkles, Newspaper } from 'lucide-
 import { useBeginner } from './lib/beginner.jsx';
 import NavRail from './components/NavRail.jsx';
 import TapeRail from './components/TapeRail.jsx';
+import VideoStage from './components/VideoStage.jsx';
 import AiQuota from './components/AiQuota.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Analyze from './pages/Analyze.jsx';
@@ -75,6 +76,7 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
+      <VideoStage />
       <TapeRail />
 
       {/* One horizontal chrome bar: identity, navigation, mode. */}

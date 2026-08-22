@@ -12,12 +12,15 @@ export default {
         raised: '#212127',
         border: '#232329',
 
-        // The accent is light — no brand hue competes with the data.
-        primary: '#f2f2f5',
+        // Brand red. Deliberately deeper than the "price down" red below, and
+        // only ever used as a filled block (buttons, active markers) — never as
+        // text — so a CTA can never be misread as a loss figure.
+        primary: '#c81b1c',
+        'primary-hi': '#e02324',
 
-        // Data colour — the only chroma in the app.
+        // Data colour. Brighter and only ever text, for the same reason.
         bull: '#30d158',
-        bear: '#ff453a',
+        bear: '#ff5c52',
         warn: '#ffd426',
 
         // Three steps, all clearing WCAG AA on the card surface.
@@ -28,22 +31,24 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Instrument Sans', 'system-ui', '-apple-system', 'sans-serif'],
-        serif: ['Instrument Serif', 'Georgia', 'serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        sans: ['SG', 'Space Grotesk', 'system-ui', 'sans-serif'],
+        mono: ['JB', 'JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         // Engraved bezel markings — small, wide-tracked, never bold.
-        micro: ['0.625rem', { lineHeight: '0.875rem', letterSpacing: '0.1em' }],
+        micro: ['0.625rem', { lineHeight: '0.875rem', letterSpacing: '0.18em' }],
         // Restrained display sizes. These are capped low on purpose: a page
         // title is a label, not a billboard, and the data is the loud part.
-        display: ['clamp(1.125rem, 1rem + 0.5vw, 1.375rem)', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
-        figure: ['clamp(1.5rem, 1.25rem + 1vw, 2rem)', { lineHeight: '1.1', letterSpacing: '-0.03em' }],
+        // Tight tracking at display sizes, the way the reference sets its headline.
+        display: ['clamp(1.125rem, 1rem + 0.5vw, 1.375rem)', { lineHeight: '1.2', letterSpacing: '-0.035em' }],
+        figure: ['clamp(1.5rem, 1.25rem + 1vw, 2rem)', { lineHeight: '1.1', letterSpacing: '-0.04em' }],
       },
+      // Sharp corners throughout — no radius, no pills. Kept as named tokens so
+      // every existing `rounded-card` / `rounded-ctl` flattens at once.
       borderRadius: {
-        card: '0.625rem',
-        ctl: '0.5rem',
-        pill: '980px',
+        card: '0',
+        ctl: '0',
+        pill: '0',
       },
       boxShadow: {
         depth: 'inset 0 1px 0 rgba(255,255,255,.04)',

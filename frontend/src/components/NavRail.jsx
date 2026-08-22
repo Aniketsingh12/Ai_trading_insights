@@ -54,9 +54,11 @@ export default function NavRail({ items, isActive }) {
 
   return (
     <div ref={railRef} className="no-bar relative -mx-1 flex overflow-x-auto px-1">
+      {/* A red rule under the active item rather than a filled pill — the brand
+          red stays a block, and a block behind nav text would fight the CTA. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-1 rounded-ctl bg-white/[.07]"
+        className="pointer-events-none absolute bottom-0 h-[2px] bg-primary"
         style={{
           transform: `translateX(${pill.x}px)`,
           width: pill.w,
@@ -72,9 +74,9 @@ export default function NavRail({ items, isActive }) {
             to={to}
             data-active={active}
             aria-current={active ? 'page' : undefined}
-            className={`relative z-10 flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-ctl px-3 py-1.5
+            className={`relative z-10 flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5
                         text-[13px] transition-colors duration-200 ${
-                          active ? 'font-medium text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
+                          active ? 'font-medium text-text-primary' : 'text-text-tertiary hover:text-text-primary'
                         }`}
           >
             <Icon size={14} strokeWidth={active ? 2.2 : 1.8} />

@@ -4,7 +4,7 @@
 
 /*
  * ═══════════════════════════════════════════════════════════════════
- *  Instrument — the material layer
+ *  The material layer
  *
  *  1. Colour means direction. Green is up, red is down, and nothing
  *     else in the interface is allowed a hue.
@@ -17,28 +17,77 @@
 html, body, #root { height: 100%; }
 
 body {
-  font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
-  background-color: theme('colors.bg');
+  font-family: 'SG', 'Space Grotesk', system-ui, sans-serif;
+  background-color: #000;
   color: theme('colors.text.primary');
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  text-rendering: geometricPrecision;
 }
+
+/* ── The atmosphere plate ────────────────────────────────────────── */
+/*
+ * Two graded passes of one clip, fixed behind everything. Sits under a heavy
+ * scrim because this app is dense with tables: the video is texture at the
+ * edges of the screen and nothing at all under content.
+ */
+.stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000; }
+.stage-bg, .stage-bg2 { position: absolute; inset: 0; overflow: hidden; }
+.stage-bg { filter: url(#grade); opacity: .5; }
+.stage-bg video, .stage-bg2 video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center top; display: block;
+}
+.stage-bg2 {
+  filter: url(#grade2);
+  mix-blend-mode: plus-lighter;
+  opacity: .28;
+  -webkit-mask-image: linear-gradient(180deg, transparent 21.5%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 21.5%, #000 100%);
+}
+/* Content has to win. Anything less and the tables become unreadable. */
+.stage-scrim {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.82) 38%, #000 72%),
+    linear-gradient(100deg, #000 18%, rgba(0,0,0,.72) 46%, rgba(0,0,0,.30) 74%, rgba(0,0,0,.55) 100%);
+}
+@media (max-width: 599px) {
+  .stage-bg video, .stage-bg2 video { object-position: 78% top; }
+  .stage-scrim {
+    background: linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.70) 24%, rgba(0,0,0,.92) 42%, #000 66%);
+  }
+}
+
+/*
+ * Everything after the plate sits above it. Sibling selector rather than a
+ * z-index on .stage: the plate is `position:fixed`, and a positioned element
+ * paints above static siblings regardless of source order, so without this the
+ * video covers the entire app.
+ */
+.stage ~ * { position: relative; z-index: 1; }
+
+.svgdefs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 /* ── Type roles ──────────────────────────────────────────────────── */
 
-/* Every market figure. Tabular so columns align and ticking numbers don't jitter. */
+/*
+ * Every market figure runs in JB. The split is the whole convention: SG is the
+ * interface talking, JB is a machine reporting — so a price never reads as
+ * prose. Tabular so columns align and a ticking number doesn't jitter.
+ */
 .num {
+  font-family: 'JB', 'JetBrains Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 
-/* Dense tabular columns — portfolio and watchlist grids only. */
-.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.mono { font-family: 'JB', 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
-/* The model's voice. Reserved for prose a model wrote. */
-.serif { font-family: 'Instrument Serif', Georgia, serif; letter-spacing: 0; }
+/* Model-written prose. Same mono voice, lighter and looser, so it reads as
+   machine output without pretending to be a measured figure. */
+.serif { font-family: 'JB', 'JetBrains Mono', ui-monospace, monospace; font-weight: 400; letter-spacing: -0.01em; }
 
 /* Engraved markings: section labels, column heads, units. Never bold. */
 .eyebrow { @apply text-micro uppercase text-text-tertiary font-medium; }
@@ -47,10 +96,12 @@ body {
 
 /* ── Surfaces ────────────────────────────────────────────────────── */
 
+/* Translucent so the plate reads faintly through, but opaque enough that a
+   dense table never has to compete with moving video behind it. */
 .card {
-  @apply relative rounded-card p-4 shadow-depth;
-  background-color: theme('colors.surface');
-  border: 1px solid rgba(255, 255, 255, .055);
+  @apply relative p-4;
+  background-color: rgba(10, 10, 12, .82);
+  border: 1px solid rgba(255, 255, 255, .09);
 }
 
 /* A card you can act on: it steps one rung up the lightness ladder. */
@@ -61,82 +112,86 @@ body {
 }
 @media (hover: hover) {
   .card-lift:hover {
-    background-color: theme('colors.elevated');
-    border-color: rgba(255, 255, 255, .11);
+    background-color: rgba(24, 24, 28, .9);
+    border-color: theme('colors.primary');
     transform: translateY(-1px);
   }
 }
 .card-lift:active { transform: translateY(0); }
 
-/* A well sunk into a card — darker, with light on its inner top edge. */
+/* A well sunk into a card. */
 .panel {
-  @apply rounded-ctl shadow-well;
-  background-color: rgba(0, 0, 0, .26);
-  border: 1px solid rgba(255, 255, 255, .04);
+  @apply shadow-well;
+  background-color: rgba(0, 0, 0, .45);
+  border-left: 2px solid theme('colors.primary');
 }
 
-/* Vibrancy. The nav bar — content scrolls beneath it. */
+/* The nav bar — content scrolls beneath it. */
 .material {
-  background-color: rgba(10, 10, 12, .78);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background-color: rgba(0, 0, 0, .86);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 @supports not (backdrop-filter: blur(1px)) {
-  .material { background-color: rgba(10, 10, 12, .97); }
+  .material { background-color: rgba(0, 0, 0, .97); }
 }
 
 .rule { border-color: rgba(255, 255, 255, .06); }
 
 /* ── Controls ────────────────────────────────────────────────────── */
 
+/* Sharp red block, white label. The one loud thing on the page. */
 .btn {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-ctl px-3.5 py-1.5
-         text-[13px] font-medium transition disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2
+         text-[13px] text-white transition disabled:opacity-40 disabled:cursor-not-allowed;
   background-color: theme('colors.primary');
-  color: theme('colors.bg');
+  font-weight: 500;
+  letter-spacing: -0.02em;
   transition-timing-function: theme('transitionTimingFunction.spring');
 }
-.btn:not(:disabled):hover { background-color: #fff; }
-.btn:not(:disabled):active { transform: scale(.97); }
+.btn:not(:disabled):hover { background-color: theme('colors.primary-hi'); }
+.btn:not(:disabled):active { transform: scale(.98); }
+/* The arrow leans into the direction of travel on hover. */
+.btn svg { transition: transform .25s theme('transitionTimingFunction.spring'); }
+.btn:not(:disabled):hover svg { transform: translateX(3px); }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-ctl px-3.5 py-1.5
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2
          text-[13px] font-medium text-text-primary transition
          disabled:opacity-40 disabled:cursor-not-allowed;
-  background-color: rgba(255, 255, 255, .06);
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, .16);
+  letter-spacing: -0.02em;
   transition-timing-function: theme('transitionTimingFunction.spring');
 }
-.btn-ghost:not(:disabled):hover { background-color: rgba(255, 255, 255, .11); }
-.btn-ghost:not(:disabled):active { transform: scale(.97); }
+.btn-ghost:not(:disabled):hover { border-color: rgba(255, 255, 255, .38); background-color: rgba(255, 255, 255, .04); }
+.btn-ghost:not(:disabled):active { transform: scale(.98); }
 
 .input {
-  @apply w-full rounded-ctl px-3 py-1.5 text-[13px] text-text-primary
+  @apply w-full px-3 py-2 text-[13px] text-text-primary
          placeholder:text-text-tertiary focus:outline-none;
-  background-color: rgba(255, 255, 255, .04);
-  border: 1px solid rgba(255, 255, 255, .07);
-  transition: border-color .18s theme('transitionTimingFunction.spring'),
-              background-color .18s theme('transitionTimingFunction.spring');
+  background-color: rgba(0, 0, 0, .5);
+  border: 1px solid rgba(255, 255, 255, .12);
+  transition: border-color .18s theme('transitionTimingFunction.spring');
 }
-.input:focus {
-  border-color: rgba(255, 255, 255, .24);
-  background-color: rgba(255, 255, 255, .06);
-}
+.input:focus { border-color: theme('colors.primary'); }
 
-/* Keyboard users get a bone ring; mouse users never see it. */
+/* Keyboard users get a white ring; mouse users never see it. White rather than
+   the brand red so it stays visible on top of a red button. */
 :focus-visible {
-  outline: 2px solid theme('colors.primary');
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: 2px solid #fff;
+  outline-offset: 3px;
 }
 
 /* ── Data accents ────────────────────────────────────────────────── */
 
-/* Direction pill — the +1.24% / −0.38% chip. */
+/* Direction chip — the +1.24% / −0.38% figure. Square, and tinted rather than
+   filled, so it never reads as a button. */
 .delta {
-  @apply num inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-semibold;
+  @apply num inline-flex items-center px-1.5 py-0.5 text-[11px] font-semibold;
 }
 .delta-up { color: theme('colors.bull'); background-color: rgba(48, 209, 88, .12); }
-.delta-down { color: theme('colors.bear'); background-color: rgba(255, 69, 58, .12); }
+.delta-down { color: theme('colors.bear'); background-color: rgba(255, 92, 82, .12); }
 
 /* ── Utility ─────────────────────────────────────────────────────── */
 

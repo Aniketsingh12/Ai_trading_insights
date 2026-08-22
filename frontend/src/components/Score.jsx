@@ -15,7 +15,7 @@ export function ScoreBadge({ label, score }) {
   const tone = toneOf(label);
   return (
     <span
-      className={`inline-flex items-baseline gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold ${tone.text}`}
+      className={`inline-flex items-baseline gap-1 px-1.5 py-0.5 text-[11px] font-semibold ${tone.text}`}
       style={{ backgroundColor: tone.fill }}
     >
       {label}
@@ -78,12 +78,12 @@ export function SignalArc({ score, label, items, className = '' }) {
       >
         {segments.length === 0 && (
           <path d={arcPath(START, START + SWEEP)} fill="none" stroke="rgba(255,255,255,.06)"
-                strokeWidth={STROKE} strokeLinecap="round" />
+                strokeWidth={STROKE} strokeLinecap="butt" />
         )}
 
         {segments.map((s, i) => (
           <path key={`t-${s.factor}`} d={arcPath(s.a0, s.a1)} fill="none"
-                strokeWidth={STROKE} strokeLinecap="round"
+                strokeWidth={STROKE} strokeLinecap="butt"
                 stroke={focus === i ? 'rgba(255,255,255,.13)' : 'rgba(255,255,255,.06)'}
                 className="transition-[stroke] duration-200" />
         ))}
@@ -95,7 +95,7 @@ export function SignalArc({ score, label, items, className = '' }) {
             fill="none"
             stroke={tone.stroke}
             strokeWidth={STROKE}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             /* pathLength normalises each segment to 1, so one dash rule covers
                them all without measuring geometry. */
             pathLength={1}
@@ -168,9 +168,9 @@ export function Breakdown({ items }) {
               <span className="text-text-primary">{b.points}</span>/{b.max}
             </span>
           </div>
-          <div className="mt-1 h-[3px] overflow-hidden rounded-full bg-white/[.06]">
+          <div className="mt-1 h-[3px] overflow-hidden bg-white/[.06]">
             <div
-              className={`h-full rounded-full ${barTone(b.points, b.max)} transition-[width] duration-700 ease-spring`}
+              className={`h-full ${barTone(b.points, b.max)} transition-[width] duration-700 ease-spring`}
               style={{ width: `${b.max ? (b.points / b.max) * 100 : 0}%` }}
             />
           </div>
@@ -210,7 +210,7 @@ export function RiskReward({ metrics, sym = '' }) {
           <span className="eyebrow">Risk</span>
           <span className="eyebrow">Reward</span>
         </div>
-        <div className="flex h-1 overflow-hidden rounded-full bg-white/[.06]">
+        <div className="flex h-1 overflow-hidden bg-white/[.06]">
           <div className="bg-bear/60 transition-[width] duration-700 ease-spring" style={{ width: `${riskPct}%` }} />
           <div className="bg-bull/60 transition-[width] duration-700 ease-spring" style={{ width: `${100 - riskPct}%` }} />
         </div>

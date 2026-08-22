@@ -15,17 +15,27 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!--
-      Three type roles, and the split carries meaning:
-        Instrument Sans  — the interface and every market figure (tabular)
-        Instrument Serif — prose a model wrote, and the verdict it reached
-        JetBrains Mono   — dense tabular columns only
+      Two type roles. SG carries the interface and headlines; JB carries every
+      number and anything machine-produced, so a figure never reads as prose.
+      Loaded as @font-face rather than a stylesheet link so the SG/JB aliases
+      are real families, and font-display:block avoids a flash of fallback
+      metrics shifting the left-locked layout on first paint.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <style>
+      @font-face {
+        font-family: 'SG';
+        src: url(https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPb54C-s0.woff2) format('woff2');
+        font-weight: 300 700;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'JB';
+        src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx3cwhsk.woff2) format('woff2');
+        font-weight: 100 800;
+        font-display: block;
+      }
+    </style>
   </head>
   <body class="bg-bg text-text-primary">
     <div id="root"></div>

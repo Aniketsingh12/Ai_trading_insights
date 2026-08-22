@@ -174,9 +174,9 @@ export default function AiQuota() {
                       <span className="text-text-tertiary">/{visitor.limit}</span>
                     </span>
                   </div>
-                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[.07]">
+                  <div className="mt-1.5 h-1 overflow-hidden bg-white/[.07]">
                     <div
-                      className={`h-full rounded-full transition-[width] duration-500 ease-spring ${spent ? 'bg-warn' : 'bg-primary'}`}
+                      className={`h-full transition-[width] duration-500 ease-spring ${spent ? 'bg-warn' : 'bg-primary'}`}
                       style={{ width: `${Math.min(100, (visitor.used / visitor.limit) * 100)}%` }}
                     />
                   </div>
