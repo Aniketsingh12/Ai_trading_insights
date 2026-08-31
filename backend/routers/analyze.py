@@ -5,6 +5,7 @@ from services import research_service
 from services.analysis_service import quick_analysis
 from utils.guard import BudgetExhausted, llm_budget, rate_limit, use_preset
 from utils.llm import current_preset
+from utils.validate import clean_ticker
 
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 
@@ -15,6 +16,9 @@ router = APIRouter(prefix="/analyze", tags=["analyze"])
     dependencies=[Depends(use_preset), Depends(rate_limit), Depends(llm_budget(1))],
 )
 async def quick(ticker: str):
+    # This value is interpolated into the model prompt. Unvalidated, it is a
+    # free-text channel straight to the provider on our account.
+    ticker = clean_ticker(ticker)
     try:
         return await quick_analysis(ticker)
     except Exception as e:
@@ -38,6 +42,7 @@ async def deep(
     and "come back tomorrow" shows a visitor nothing. When the allowance is
     gone we hand back a real run from earlier, flagged as a sample.
     """
+    ticker = clean_ticker(ticker)
     try:
         await llm_budget(DEEP_RESEARCH_COST)(request=request, x_api_key=x_api_key)
     except BudgetExhausted as limit_hit:

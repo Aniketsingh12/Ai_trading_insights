@@ -1,9 +1,10 @@
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from mcp_servers import market_data_mcp
 from utils.guard import rate_limit_data
+from utils.validate import MAX_TICKERS, clean_ticker
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"], dependencies=[Depends(rate_limit_data)])
 
@@ -35,11 +36,17 @@ async def list_watchlist():
 
 @router.post("/{ticker}")
 async def add(ticker: str):
-    _watchlists.setdefault(_user_id(), set()).add(ticker.upper())
-    return {"ok": True, "ticker": ticker.upper()}
+    # Validated on the way IN, not just on read: a stored symbol later feeds the
+    # daily report's prompt, so an unchecked one here is a delayed injection.
+    ticker = clean_ticker(ticker)
+    watch = _watchlists.setdefault(_user_id(), set())
+    if ticker not in watch and len(watch) >= MAX_TICKERS:
+        raise HTTPException(422, f"Watchlist is full ({MAX_TICKERS} symbols).")
+    watch.add(ticker)
+    return {"ok": True, "ticker": ticker}
 
 
 @router.delete("/{ticker}")
 async def remove(ticker: str):
-    _watchlists.setdefault(_user_id(), set()).discard(ticker.upper())
+    _watchlists.setdefault(_user_id(), set()).discard(clean_ticker(ticker))
     return {"ok": True}

@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     visitor_llm_limit: int = 0     # if > 0, AI calls one anonymous visitor gets per UTC day
     daily_llm_limit: int = 0       # if > 0, ceiling across ALL visitors per UTC day
     rate_limit_per_min: int = 0    # if > 0, per-IP burst cap (data routes get 8x)
+    # How many proxies sit in front of this app. The visitor's real address is
+    # this many entries back from the right of X-Forwarded-For; everything to
+    # the left of that the client could have written itself. Railway = 1.
+    trusted_proxy_hops: int = 1
     # Web dev + Capacitor app origins (Android: https://localhost, iOS: capacitor://localhost).
     cors_origins: str = "http://localhost:5173,https://localhost,capacitor://localhost,http://localhost"
 

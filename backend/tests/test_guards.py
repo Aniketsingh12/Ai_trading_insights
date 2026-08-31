@@ -84,16 +84,51 @@ def test_visitors_are_metered_separately(monkeypatch):
     spend(1, ip="2.2.2.2")   # a different visitor is unaffected
 
 
+def _req(xff=None, host=None):
+    class FakeReq:
+        headers = {"x-forwarded-for": xff} if xff else {}
+        client = type("C", (), {"host": host})() if host else None
+    return FakeReq()
+
+
 def test_visitor_identity_uses_forwarded_header(monkeypatch):
     """
     On Railway every request arrives from the same proxy address, so reading
     request.client directly would put the entire internet in one bucket.
     """
-    class FakeReq:
-        headers = {"x-forwarded-for": "203.0.113.7, 10.0.0.1"}
-        client = None
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 1)
+    assert guard.client_ip(_req("203.0.113.7")) == "203.0.113.7"
 
-    assert guard.client_ip(FakeReq()) == "203.0.113.7"
+
+def test_a_spoofed_forwarded_header_cannot_forge_a_new_visitor(monkeypatch):
+    """
+    The attack the quota lives or dies on.
+
+    A proxy *appends* the address it received the request from, so a client that
+    sends its own X-Forwarded-For ends up leftmost in the chain and the real
+    address is appended after it. Reading the leftmost entry therefore lets
+    anyone mint a fresh identity per request and bypass the per-visitor limit
+    entirely. Only entries our own proxy appended can be trusted.
+    """
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 1)
+    forged = _req("1.2.3.4, 203.0.113.7")     # client wrote "1.2.3.4"; Railway appended the truth
+    assert guard.client_ip(forged) == "203.0.113.7"
+    assert guard.client_ip(forged) != "1.2.3.4"
+
+
+def test_extra_proxy_hops_are_configurable(monkeypatch):
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 2)
+    assert guard.client_ip(_req("1.2.3.4, 203.0.113.7, 10.0.0.1")) == "203.0.113.7"
+
+
+def test_a_short_chain_does_not_index_out_of_bounds(monkeypatch):
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 3)
+    assert guard.client_ip(_req("203.0.113.7")) == "203.0.113.7"
+
+
+def test_falls_back_to_the_socket_when_no_header(monkeypatch):
+    assert guard.client_ip(_req(host="198.51.100.9")) == "198.51.100.9"
+    assert guard.client_ip(_req()) == "unknown"
 
 
 def test_refused_call_is_not_charged(monkeypatch):

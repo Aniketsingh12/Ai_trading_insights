@@ -46,16 +46,29 @@ def is_owner(provided: str | None) -> bool:
 
 def client_ip(request: Request) -> str:
     """
-    The visitor's address.
+    The visitor's address, taken from the last hop we actually trust.
 
-    Railway (and every other PaaS) terminates TLS at a proxy, so
-    `request.client.host` is the proxy for *every* visitor — using it directly
-    would put the whole internet in one shared quota bucket. The real address is
-    the first entry of X-Forwarded-For.
+    Railway terminates TLS at a proxy, so `request.client.host` is the same
+    proxy for every visitor — using it directly would put the whole internet in
+    one shared quota bucket.
+
+    But the *leftmost* X-Forwarded-For entry is the wrong answer too, and worse:
+    a client can send its own X-Forwarded-For, and the proxy appends rather than
+    replaces. So the left of the chain is attacker-controlled, and reading it
+    means a new "visitor" on every request — the per-visitor quota stops
+    existing. Only the entries our own proxies appended can be trusted, so we
+    count TRUSTED_PROXY_HOPS back from the right.
     """
     xff = request.headers.get("x-forwarded-for")
     if xff:
-        return xff.split(",")[0].strip()
+        chain = [p.strip() for p in xff.split(",") if p.strip()]
+        hops = max(1, settings.trusted_proxy_hops)
+        if len(chain) >= hops:
+            return chain[-hops]
+        # Shorter chain than configured — trust the leftmost real entry rather
+        # than index out of bounds.
+        if chain:
+            return chain[0]
     return request.client.host if request.client else "unknown"
 
 
