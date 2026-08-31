@@ -1,5 +1,4 @@
 import { AccessError, getKey, requestKey } from './auth';
-import { getPreset } from './modelPreset';
 
 // Dev/web: '/api' hits the Vite proxy (or same-origin). Production web + the
 // Capacitor APK have no proxy, so they call the deployed backend directly via
@@ -18,14 +17,14 @@ async function errorMessage(r) {
 }
 
 async function req(path, opts = {}) {
+  // No model-preset header: which model runs is a backend decision now, set by
+  // the TOGETHER_MODEL_* env vars rather than chosen per request in the UI.
   const key = getKey();
-  const preset = getPreset();
   const r = await fetch(`${BASE}${path}`, {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
       ...(key ? { 'X-API-Key': key } : {}),
-      ...(preset ? { 'X-Model-Preset': preset } : {}),
       ...opts.headers,
     },
   });
@@ -43,7 +42,6 @@ const enc = encodeURIComponent;
 
 export const api = {
   health: () => req('/health'),
-  models: () => req('/models'),
   search: (q) => req(`/market/search?q=${enc(q)}`),
   indices: (region = 'global') => req(`/market/indices?region=${enc(region)}`),
   quote: (t) => req(`/market/quote/${enc(t)}`),

@@ -5,7 +5,6 @@ import { useBeginner } from './lib/beginner.jsx';
 import NavRail from './components/NavRail.jsx';
 import TapeRail from './components/TapeRail.jsx';
 import VideoStage from './components/VideoStage.jsx';
-import AiQuota from './components/AiQuota.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Analyze from './pages/Analyze.jsx';
 import Watchlist from './pages/Watchlist.jsx';
@@ -106,7 +105,6 @@ export default function App() {
             <NavRail items={nav} isActive={isActive} />
           </div>
 
-          <AiQuota />
           <BeginnerToggle beginner={beginner} setBeginner={setBeginner} />
         </div>
       </header>

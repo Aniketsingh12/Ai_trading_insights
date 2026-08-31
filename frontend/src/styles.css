@@ -70,7 +70,17 @@ body {
  * paints above static siblings regardless of source order, so without this the
  * video covers the entire app.
  */
-.stage ~ * { position: relative; z-index: 1; }
+/*
+ * Position only — deliberately no z-index.
+ *
+ * This rule sits after @tailwind utilities, so an explicit `z-index` here wins
+ * at equal specificity against every `z-*` utility in the app — which flattened
+ * the sticky header to the same layer as the page and let content paint over
+ * it. Positioned siblings with `z-index: auto` already stack above `.stage`
+ * (z-index 0) by document order, so the lift costs nothing and the header's own
+ * z-40 keeps working.
+ */
+.stage ~ * { position: relative; }
 
 .svgdefs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
