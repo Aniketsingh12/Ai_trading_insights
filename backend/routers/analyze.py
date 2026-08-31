@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 
 from config import DEEP_RESEARCH_COST
@@ -5,7 +7,10 @@ from services import research_service
 from services.analysis_service import quick_analysis
 from utils.guard import BudgetExhausted, llm_budget, rate_limit, use_preset
 from utils.llm import current_preset
+from utils.redact import safe_detail
 from utils.validate import clean_ticker
+
+log = logging.getLogger("marketmind.analyze")
 
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 
@@ -22,7 +27,10 @@ async def quick(ticker: str):
     try:
         return await quick_analysis(ticker)
     except Exception as e:
-        raise HTTPException(500, str(e))
+        # Full detail to the logs, a safe message to the caller: an arbitrary
+        # internal exception's text is not written for a stranger to read.
+        log.exception("quick analysis failed for %s", ticker)
+        raise HTTPException(500, safe_detail(e, "Analysis failed. Try again shortly."))
 
 
 @router.post("/deep/{ticker}", dependencies=[Depends(rate_limit), Depends(use_preset)])

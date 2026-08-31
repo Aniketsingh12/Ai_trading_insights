@@ -9,11 +9,15 @@ any tickers the caller passes (e.g. the user's watchlist) — nothing brand-pinn
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from mcp_servers import market_data_mcp, news_mcp
 from utils.llm import llm
+from utils.redact import safe_detail
+
+log = logging.getLogger("marketmind.daily")
 
 _BRIEFING_SYSTEM = """You are a markets desk analyst writing a concise pre-market style
 briefing. Given index levels, the day's biggest movers, and top headlines, write:
@@ -84,7 +88,8 @@ Write the briefing now."""
     try:
         briefing = await llm.complete(prompt, system=_BRIEFING_SYSTEM, tier="quick", max_tokens=500)
     except Exception as e:
-        briefing = f"(briefing unavailable: {e})"
+        log.exception("daily briefing failed")
+        briefing = f"(briefing unavailable: {safe_detail(e, 'the model is unreachable')})"
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),

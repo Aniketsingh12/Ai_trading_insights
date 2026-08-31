@@ -20,6 +20,7 @@ from typing import Any, Awaitable, Callable
 
 from agents import report_agent
 from agents.research_agent import ResearchAgent
+from utils.redact import safe_detail
 from agents.risk_agent import RiskAgent
 from agents.sentiment_agent import SentimentAgent
 from agents.technical_agent import TechnicalAgent
@@ -46,7 +47,7 @@ async def run_deep_research(ticker: str, progress_cb: ProgressCb = None) -> dict
             return {
                 "agent": agent.name,
                 "role": agent.role,
-                "output": f"(unavailable: {e})",
+                "output": f"(unavailable: {safe_detail(e, 'this analyst could not run')})",
                 "data": {},
             }
 

@@ -21,7 +21,7 @@ import httpx
 from anthropic import Anthropic
 
 from config import settings
-from utils import model_presets
+from utils import model_presets, redact
 
 Tier = Literal["quick", "agent", "report"]
 
@@ -168,7 +168,8 @@ class LLMClient:
         choices = data.get("choices") or []
         if not choices:
             err = data.get("error") or data
-            raise RuntimeError(f"LLM returned no choices: {str(err)[:300]}")
+            # Provider error bodies sometimes echo parts of the request back.
+            raise RuntimeError(f"LLM returned no choices: {redact.scrub(err)[:300]}")
         message = choices[0].get("message") or {}
         content = message.get("content") or message.get("reasoning_content") or ""
         content = content.strip()
@@ -238,7 +239,7 @@ class LLMClient:
                     models = [m["name"] for m in r.json().get("models", [])]
                 return {"provider": "ollama", "ok": True, "models": models}
             except Exception as e:
-                return {"provider": "ollama", "ok": False, "error": str(e)}
+                return {"provider": "ollama", "ok": False, "error": redact.scrub(e)}
         if self.provider == "openai_compat":
             return {
                 "provider": "openai_compat",

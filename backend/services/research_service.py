@@ -8,6 +8,7 @@ see backend/tasks/README.md. The crew itself is unchanged either way.)
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from collections import OrderedDict
 from datetime import datetime, timezone
@@ -15,6 +16,9 @@ from typing import Any
 
 from agents.crew import AGENT_NAMES, run_deep_research
 from utils import llm
+from utils.redact import safe_detail
+
+log = logging.getLogger("marketmind.research")
 
 # job_id -> job dict. Bounded: each finished job holds the full report plus every
 # agent's raw data (candles, news, ratios), so an unbounded dict would slowly eat
@@ -100,6 +104,7 @@ async def run_job(job_id: str) -> None:
         job["status"] = "done"
     except Exception as e:
         job["status"] = "error"
-        job["error"] = str(e)
+        log.exception("deep research failed for %s", job["ticker"])
+        job["error"] = safe_detail(e, "The research run failed.")
     finally:
         llm.reset_preset(token)
