@@ -109,6 +109,29 @@ sections survived, and the cost per call.
 
 See `backend/utils/llm.py` for the abstraction layer.
 
+## Model picker
+
+On the Together provider, the deployment also offers a **quality picker** instead of one
+fixed model — `GET /api/models` returns the catalogue, and a request can opt in with
+`?model=<preset>` or an `X-Model-Preset` header. A preset sets all three tiers at once
+(`backend/utils/model_presets.py`):
+
+| Preset | Cost | Who can use it | Runs on |
+|--------|------|-----------------|---------|
+| `free` | draws nothing from any allowance | everyone | `TOGETHER_MODEL_FREE` for all three tiers |
+| `standard` | 1× | everyone (default) | the deployment's own `TOGETHER_MODEL_QUICK` / `_AGENT` / `_REPORT` |
+| `premium` | 3× | owner only (`API_ACCESS_KEY`) | `TOGETHER_MODEL_PREMIUM` for all three tiers |
+
+Model ids come from those four env vars, never from a list hardcoded in the app — set
+`TOGETHER_MODEL_FREE` / `TOGETHER_MODEL_PREMIUM` to any Together model id to try it, or
+leave one blank to drop that option from the picker. A preset that would resolve to the
+exact same models as `standard` is hidden automatically rather than shown as a fake
+upgrade (`model_presets.is_redundant`).
+
+This is backend-only by design — there's no model dropdown in the frontend, so which model
+a request runs on is a deployment decision (env vars), not something a visitor's browser
+can influence.
+
 ## Deploy
 
 Deploy as **one service on Railway** (Docker builds the React app and FastAPI serves it,
@@ -160,8 +183,8 @@ tickers/watchlist), each row expandable for the math + AI reason; **Daily Report
 (briefing + separate Global / India news); Risk/Reward card on every Analyze page. The
 screener fetches one year of candles per ticker *once*, derives all indicators locally,
 and bounds concurrency to stay under data-provider rate limits. A **Beginner mode** toggle
-(sidebar) hides raw indicators and shows only the plain-English call + reason, and ⓘ
-tooltips explain every term inline.
+(top header, next to the nav) hides raw indicators and shows only the plain-English call +
+reason, and ⓘ tooltips explain every term inline.
 
 ## News
 
@@ -204,7 +227,9 @@ Exchange/currency/region logic lives in `backend/utils/markets.py`.
 
 The frontend is one responsive codebase for web, installable PWA, and Android APK:
 
-- **Phone browser**: sidebar becomes a top bar + bottom tab nav automatically (<768px)
+- **Phone browser**: the same one-bar header at every width — the nav rail scrolls
+  horizontally and its sliding active-indicator stays measured against the real element
+  (`frontend/src/components/NavRail.jsx`) rather than swapping to a separate mobile pattern
 - **PWA**: "Add to Home Screen" installs it full-screen with an icon (manifest + service
   worker already wired up, `frontend/public/`)
 - **Android APK**: Capacitor wraps the same `dist/` build — no separate mobile codebase.
@@ -213,27 +238,61 @@ The frontend is one responsive codebase for web, installable PWA, and Android AP
 ## Production hardening
 
 Deployed publicly as a demo, so visitors **can** run the AI features — there is no login,
-because nobody signs up to look at a portfolio project. Instead each visitor gets a
-metered free trial with a hard ceiling on total cost (`backend/utils/guard.py`, all off
-by default so local dev has zero friction):
+because nobody signs up to look at a portfolio project. That openness is exactly what
+needs guarding: a public URL sitting in front of a paid provider key is a target for being
+used as a free LLM proxy, not just a heavy user. Three independent layers handle that.
+
+**Budgets** (`backend/utils/guard.py`) — each visitor gets a metered free trial with a
+hard ceiling on total cost, all off by default so local dev has zero friction:
 
 ```
 VISITOR_LLM_LIMIT=10      # AI runs one visitor gets per day
 DAILY_LLM_LIMIT=60        # ceiling across ALL visitors — bounds the bill
 API_ACCESS_KEY=<random>   # your passcode; bypasses both limits
 RATE_LIMIT_PER_MIN=30     # per-IP burst cap (data routes get 8x)
+TRUSTED_PROXY_HOPS=1      # proxies in front of the app — Railway/Render/Fly = 1
 ```
 
 Only AI calls are metered — prices, charts, the 0–100 scoring maths, watchlist and
 portfolio stay unlimited, so the app never looks broken. Deep research draws 5 units (it
-makes five model calls); everything else draws 1. When the day's budget is spent, deep
-research returns a real earlier report flagged as a saved sample rather than an error, so
-the showpiece still demonstrates itself. See
+makes five model calls); everything else draws 1, scaled by the chosen [model
+preset](#model-picker)'s cost multiplier. When the day's budget is spent, deep research
+returns a real earlier report flagged as a saved sample rather than an error, so the
+showpiece still demonstrates itself. See
 **[DEPLOY.md](DEPLOY.md#running-it-as-a-public-demo)** for the cost table.
 
+The visitor quota keys off the caller's IP, which is spoofable on its own — a client can
+send its own `X-Forwarded-For` and the real proxy only appends to it, so the *leftmost*
+entry is attacker-controlled. `client_ip()` reads `TRUSTED_PROXY_HOPS` entries back from
+the **right** instead. That makes the per-visitor limit a fairness mechanism, not a
+security boundary; `DAILY_LLM_LIMIT` is the layer that actually bounds the bill, and it
+can't be side-stepped by rotating IPs.
+
+**Input validation** (`backend/utils/validate.py`) — every ticker is interpolated into a
+model prompt somewhere downstream, so an unvalidated one is a free-text channel into the
+provider on our account: `analyze/Ignore previous instructions and...` is a
+prompt-injection vector, not just a bad request. Every router (`analyze`, `market`,
+`screener`, `watchlist`, `portfolio`) validates on the way in against an allowlist
+(letters, digits, and the separators real tickers use — `AAPL`, `BRK.B`, `RELIANCE.NS`,
+`BTC-USD`, `^NSEI`, `GC=F`) and rejects anything else with a 422, not a silent
+truncation. Batches are capped at 25 symbols so one request can't fan a data or LLM call
+out to thousands, and numeric inputs (`days`, `limit`) are clamped rather than trusted
+verbatim.
+
+**Secret redaction** (`backend/utils/redact.py`) — a handful of paths (quick analysis,
+the daily briefing, deep research, each analyst agent, the LLM client itself) hand
+exception text back to the client for debuggability. Before that text leaves the process,
+`safe_detail()` scrubs every configured credential and any key-shaped token (`sk-…`,
+`Bearer …`, `AIza…`) out of it, and replaces anything that isn't a message the app raised
+deliberately with a generic fallback — so a future client-library exception that happens
+to embed a request (and therefore a key) can't turn a debug message into a leak. Full,
+unredacted detail still reaches the server logs via `log.exception(...)`.
+
 Every external data/LLM call is wrapped so one failing ticker or rate-limited request
-degrades gracefully (a null tile, a fallback reason) instead of 500-ing the whole page —
-see `backend/tests/test_regressions.py` for the covered failure modes. In-memory stores
+degrades gracefully (a null tile, a fallback reason) instead of 500-ing the whole page.
+The full behavior above is pinned by tests — `test_guards.py`, `test_input_hardening.py`,
+`test_key_leakage.py`, `test_model_presets.py`, `test_report_contract.py` and
+`test_regressions.py` — 160 tests in total (`cd backend && pytest -q`). In-memory stores
 (watchlist, portfolio, deep-research jobs) are capped and reset on restart; a Postgres
 schema is ready in `backend/db/schemas.sql` if you want persistence instead.
 
@@ -242,18 +301,28 @@ schema is ready in `backend/db/schemas.sql` if you want persistence instead.
 ```
 marketmind/
 ├── backend/
-│   ├── agents/        # Phase 2 deep-research crew (5 agents, no CrewAI runtime dep)
-│   ├── mcp_servers/    # market data / news / fundamentals / social / options / portfolio
-│   ├── routers/        # FastAPI endpoints (analyze, market, screener, watchlist, portfolio)
-│   ├── services/       # research jobs, quick analysis, screener ranking, daily report
-│   ├── utils/          # llm.py (4 providers), markets.py, scoring.py, cache.py, guard.py
-│   ├── db/             # Postgres schema + Supabase client (optional persistence)
-│   ├── tests/          # pytest — scoring, markets, news filter, regressions
+│   ├── agents/          # deep-research crew: research/technical/sentiment/risk + report_agent
+│   │                    #   (synthesis + parse_verdict, no CrewAI runtime dep)
+│   ├── mcp_servers/     # market data / news / fundamentals / social / options / portfolio
+│   ├── routers/         # analyze, health, market, models, portfolio, screener, watchlist
+│   ├── services/        # research jobs, quick analysis, screener ranking, daily report
+│   ├── utils/           # llm.py (5 providers), model_presets.py, guard.py (budgets/rate
+│   │                    #   limit), validate.py (ticker allowlist), redact.py (secret
+│   │                    #   scrubbing), markets.py, scoring.py, cache.py
+│   ├── scripts/         # eval_report_model.py — measures candidate report-tier models
+│   ├── db/              # Postgres schema + Supabase client (optional persistence)
+│   ├── tests/           # pytest — 160 tests: scoring/markets/news/regressions plus
+│   │                    #   guards, model_presets, input_hardening, key_leakage, report_contract
 │   └── .env.example
 ├── frontend/
 │   ├── src/pages/       # Dashboard, Analyze, TopPicks, DailyReport, Watchlist, Portfolio
-│   ├── src/components/  # Score.jsx (badge/breakdown/risk-reward), InfoTip.jsx
-│   ├── src/lib/         # api.js, beginner.jsx (mode toggle), glossary.js
+│   ├── src/components/  # NavRail (sliding nav indicator), VideoStage (background plate),
+│   │                    #   TapeRail, Score, TickerSearch, Segmented, PageHeader, Delta,
+│   │                    #   InfoTip, AiText
+│   ├── src/lib/         # api.js, auth.js (passcode storage), beginner.jsx (mode toggle),
+│   │                    #   glossary.js
+│   ├── src/styles.css + tailwind.config.js  # the visual system: graphite/red palette,
+│   │                    #   sharp corners, frosted-glass cards, Space Grotesk/JetBrains Mono
 │   ├── public/          # PWA manifest, service worker, icons
 │   └── capacitor.config.json
 ├── run.ps1 / run.sh    # single-command launcher (setup + start both, picks free ports)
@@ -263,7 +332,5 @@ marketmind/
 ├── MOBILE.md           # PWA + Android APK guide
 └── README.md
 ```
-
-See the original guide for full architecture, phased build plan, and pricing.
 
 **Not financial advice. Pure AI-powered analysis.**
